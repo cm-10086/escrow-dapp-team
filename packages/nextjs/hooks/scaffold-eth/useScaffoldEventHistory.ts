@@ -14,6 +14,7 @@ import {
   UseScaffoldEventHistoryConfig,
   UseScaffoldEventHistoryData,
 } from "~~/utils/scaffold-eth/contract";
+import { readEventsInBatches } from "~~/utils/scaffold-eth/readEventsInBatches";
 
 const getEvents = async (
   getLogsParams: GetLogsParameters<AbiEvent | undefined, AbiEvent[] | undefined, boolean, BlockNumber, BlockNumber>,
@@ -94,6 +95,9 @@ export const useScaffoldEventHistory = <
   enabled = true,
   blocksBatchSize = 500,
 }: UseScaffoldEventHistoryConfig<TContractName, TEventName, TBlockData, TTransactionData, TReceiptData>) => {
+  if (!Number.isSafeInteger(blocksBatchSize) || blocksBatchSize <= 0) {
+    throw new Error("blocksBatchSize must be a positive safe integer");
+  }
   const selectedNetwork = useSelectedNetwork(chainId);
 
   // Runtime warning for non-local chains
@@ -149,15 +153,13 @@ export const useScaffoldEventHistory = <
       },
     ],
     queryFn: async ({ pageParam }) => {
-      if (!isContractAddressAndClientReady) return undefined;
+      if (!isContractAddressAndClientReady || blockNumber === undefined) return undefined;
 
       // Calculate the toBlock for this batch
-      let batchToBlock = toBlock;
       const batchEndBlock = pageParam + BigInt(blocksBatchSize) - 1n;
-      const maxBlock = toBlock || (blockNumber ? BigInt(blockNumber) : undefined);
-      if (maxBlock) {
-        batchToBlock = batchEndBlock < maxBlock ? batchEndBlock : maxBlock;
-      }
+      const maxBlock = toBlock !== undefined && toBlock < blockNumber ? toBlock : blockNumber;
+      if (pageParam > maxBlock) return [];
+      const batchToBlock = batchEndBlock < maxBlock ? batchEndBlock : maxBlock;
 
       const data = await getEvents(
         {
@@ -171,19 +173,19 @@ export const useScaffoldEventHistory = <
         { blockData, transactionData, receiptData },
       );
 
-      setLastFetchedBlock(batchToBlock || blockNumber || 0n);
+      setLastFetchedBlock(previous => (previous === null || batchToBlock > previous ? batchToBlock : previous));
 
       return data;
     },
-    enabled: enabled && isContractAddressAndClientReady && !isPollingActive, // Disable when polling starts
+    enabled: enabled && isContractAddressAndClientReady && blockNumber !== undefined && !isPollingActive,
     initialPageParam: fromBlockValue,
     getNextPageParam: (lastPage, allPages, lastPageParam) => {
-      if (!blockNumber || fromBlockValue >= blockNumber) return undefined;
+      if (blockNumber === undefined || fromBlockValue >= blockNumber) return undefined;
 
       const nextBlock = lastPageParam + BigInt(blocksBatchSize);
 
       // Don't go beyond the specified toBlock or current block
-      const maxBlock = toBlock && toBlock < blockNumber ? toBlock : blockNumber;
+      const maxBlock = toBlock !== undefined && toBlock < blockNumber ? toBlock : blockNumber;
 
       if (nextBlock > maxBlock) return undefined;
 
@@ -207,47 +209,52 @@ export const useScaffoldEventHistory = <
 
   // Check if we're caught up and should start polling
   const shouldStartPolling = () => {
-    if (!watch || !blockNumber || isPollingActive) return false;
+    if (!watch || blockNumber === undefined || isPollingActive) return false;
 
     return !query.hasNextPage && query.status === "success";
   };
 
   // Poll for new events when watch mode is enabled
-  useQuery({
+  const liveQuery = useQuery({
     queryKey: ["liveEvents", contractName, eventName, blockNumber?.toString(), lastFetchedBlock?.toString()],
     enabled: Boolean(
-      watch && enabled && isContractAddressAndClientReady && blockNumber && (shouldStartPolling() || isPollingActive),
+      watch &&
+        enabled &&
+        isContractAddressAndClientReady &&
+        blockNumber !== undefined &&
+        (shouldStartPolling() || isPollingActive),
     ),
     queryFn: async () => {
-      if (!isContractAddressAndClientReady || !blockNumber) return null;
+      if (!isContractAddressAndClientReady || blockNumber === undefined) return null;
 
       if (!isPollingActive && shouldStartPolling()) {
         setIsPollingActive(true);
       }
 
-      const maxBlock = toBlock && toBlock < blockNumber ? toBlock : blockNumber;
-      const startBlock = lastFetchedBlock || maxBlock;
+      const maxBlock = toBlock !== undefined && toBlock < blockNumber ? toBlock : blockNumber;
+      const startBlock = lastFetchedBlock ?? fromBlockValue - 1n;
 
       // Only fetch if there are new blocks to check
       if (startBlock >= maxBlock) return null;
 
-      const newEvents = await getEvents(
-        {
-          address: deployedContractData?.address,
-          event,
-          fromBlock: startBlock + 1n,
-          toBlock: maxBlock,
-          args: filters,
-        },
-        publicClient,
-        { blockData, transactionData, receiptData },
-      );
+      const newEvents = await readEventsInBatches({
+        fromBlock: startBlock + 1n,
+        toBlock: maxBlock,
+        blocksBatchSize,
+        readBatch: (fromBlock, toBlock) =>
+          getEvents(
+            { address: deployedContractData?.address, event, fromBlock, toBlock, args: filters },
+            publicClient,
+            { blockData, transactionData, receiptData },
+          ),
+      });
 
       if (newEvents && newEvents.length > 0) {
         setLiveEvents(prev => [...newEvents, ...prev]);
       }
 
-      setLastFetchedBlock(maxBlock);
+      // Publish events and advance only when every batch has completed successfully.
+      setLastFetchedBlock(previous => (previous === null || maxBlock > previous ? maxBlock : previous));
       return newEvents;
     },
     refetchInterval: false,
@@ -284,9 +291,13 @@ export const useScaffoldEventHistory = <
   return {
     data: combinedEvents,
     status: query.status,
-    error: query.error,
+    error: query.error ?? liveQuery.error,
     isLoading: query.isLoading,
-    isFetchingNewEvent: query.isFetchingNextPage,
-    refetch: query.refetch,
+    isFetchingNewEvent: query.isFetchingNextPage || liveQuery.isFetching,
+    refetch: async (...args: Parameters<typeof query.refetch>) => {
+      const historyResult = await query.refetch(...args);
+      if (isPollingActive) await liveQuery.refetch(...args);
+      return historyResult;
+    },
   };
 };
