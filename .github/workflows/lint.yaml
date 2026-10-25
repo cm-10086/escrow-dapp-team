@@ -52,3 +52,6 @@ jobs:
 
       - name: Test event query batching
         run: yarn workspace @se-2/nextjs test:events
+
+      - name: Test account role summaries
+        run: yarn workspace @se-2/nextjs test:roles

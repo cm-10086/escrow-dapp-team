@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAccount } from "wagmi";
+import { EscrowAccountRoles } from "~~/components/escrow/EscrowAccountRoles";
 import { EscrowOrderRow } from "~~/components/escrow/EscrowOrderRow";
 import { Address } from "~~/components/scaffold-eth";
 import {
@@ -16,8 +17,14 @@ export default function EscrowPage() {
   const { address } = useAccount();
   const { targetNetwork } = useTargetNetwork();
   const { data: escrow, isLoading: isContractLoading } = useDeployedContractInfo({ contractName: "Escrow" });
-  const { data: orderCount } = useScaffoldReadContract({ contractName: "Escrow", functionName: "orderCount" });
-  const { data: arbiter } = useScaffoldReadContract({ contractName: "Escrow", functionName: "arbiter" });
+  const { data: orderCount, error: orderCountError } = useScaffoldReadContract({
+    contractName: "Escrow",
+    functionName: "orderCount",
+  });
+  const { data: arbiter, error: arbiterError } = useScaffoldReadContract({
+    contractName: "Escrow",
+    functionName: "arbiter",
+  });
   const {
     data: created,
     error,
@@ -36,6 +43,11 @@ export default function EscrowPage() {
   const orderIds = [
     ...new Set(created.flatMap(event => (typeof event?.args.id === "bigint" ? [event.args.id] : []))),
   ].sort((a, b) => (a > b ? -1 : a < b ? 1 : 0));
+
+  const roleDataFailed = Boolean(error || arbiterError || orderCountError || (!isContractLoading && !escrow));
+  const roleDataReady = Boolean(
+    escrow && arbiter !== undefined && orderCount !== undefined && !isLoading && BigInt(orderIds.length) >= orderCount,
+  );
 
   const refresh = async () => {
     setIsRefreshing(true);
@@ -62,6 +74,12 @@ export default function EscrowPage() {
         <div>
           <p className="mt-0 mb-2 text-sm opacity-70">当前账户</p>
           {address ? <Address address={address} size="sm" /> : <span>未连接钱包，可查看订单</span>}
+          <EscrowAccountRoles
+            account={address}
+            arbiter={arbiter}
+            orders={created.map(event => event?.args ?? {})}
+            dataState={roleDataFailed ? "error" : roleDataReady ? "ready" : "loading"}
+          />
         </div>
         <div>
           <p className="mt-0 mb-2 text-sm opacity-70">托管合约 · {targetNetwork.name}</p>
