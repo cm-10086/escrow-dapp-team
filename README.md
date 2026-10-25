@@ -2,7 +2,7 @@
 
 基于彭春沐实验三的完整项目，继续开发 `/escrow` 页面，使用彭在实验三部署的 Escrow 和代币合约。
 
-> 本仓库以彭的实验三源码为起点，选择大作业路线 B。`/escrow` 页面待三人按下方分工开发；现有项目包含 `/debug` 合约调试页面。
+> 本仓库以彭的实验三源码为起点，选择大作业路线 B。`/escrow` 已接入订单列表、角色提示、争议与仲裁；创建订单、付款与确认收货模块待按分工集成。
 
 原项目来源：`/home/student/blockchain-course/my-first-dapp`。原始说明保存在 [docs/UPSTREAM_README.md](docs/UPSTREAM_README.md)。
 
@@ -50,7 +50,7 @@ yarn install --immutable
 yarn start
 ```
 
-在浏览器访问终端输出的本地地址，现有合约调试入口为 `/debug`。开发沿用已有测试网部署，无需先运行 `yarn chain` 或重新部署合约。
+在浏览器访问终端输出的本地地址，订单页面为 `/escrow`，合约调试入口为 `/debug`。开发沿用已有测试网部署，无需先运行 `yarn chain` 或重新部署合约。
 
 常用检查命令：`yarn next:check-types`、`yarn hardhat:check-types`、`yarn lint`。首次编译生成 Hardhat 类型时使用 `yarn hardhat:compile`。现有 CI 已改为编译合约，不会因默认网络为测试网而尝试部署。
 
@@ -78,6 +78,16 @@ yarn start
 5. 合并前检查 `/escrow` 使用的网络、地址和 ABI，完成联合验收。
 
 建议功能分支：`feat/order-list`、`feat/order-actions`、`feat/dispute-arbitration`。
+
+## 争议与仲裁的页面集成
+
+`feat/order-list` 已整合蔡的 `584cbcc` 提交。`EscrowOrderRow` 使用事件提供的实际订单号调用 `getOrder`，把订单号及读取到的 `buyer`、`seller`、`status` 传给 `EscrowDisputeActions`。
+
+现有写入 hook 会等待交易成功确认后返回；组件随后触发 `onConfirmed`，订单行调用 `refetch()` 重新读取订单。订单状态和可见按钮随查询结果更新。失败交易不会触发成功刷新。
+
+订单列表通过 `OrderCreated` 事件获取 ID，查询批次为 10 个区块。金额读取订单实际代币的精度与符号。连接买家、卖家和仲裁人钱包时，各订单行根据链上参与人和状态显示对应操作。
+
+本次接入已通过前端 TypeScript、lint 和 4 个权限测试。浏览器在隔离的 RPC 与钱包数据下验证了实际订单号传递、等待回执、争议成功后的状态刷新、仲裁退款后的状态刷新、拒绝签名及失败回执不触发成功刷新，以及卖家权限和移动端布局。公共测试网的三人业务验收仍需使用真实钱包完成。
 
 ## 初始检查结果
 

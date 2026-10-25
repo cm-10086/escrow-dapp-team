@@ -1,0 +1,129 @@
+"use client";
+
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAccount } from "wagmi";
+import { EscrowOrderRow } from "~~/components/escrow/EscrowOrderRow";
+import { Address } from "~~/components/scaffold-eth";
+import {
+  useDeployedContractInfo,
+  useScaffoldEventHistory,
+  useScaffoldReadContract,
+  useTargetNetwork,
+} from "~~/hooks/scaffold-eth";
+
+export default function EscrowPage() {
+  const { address } = useAccount();
+  const { targetNetwork } = useTargetNetwork();
+  const { data: escrow, isLoading: isContractLoading } = useDeployedContractInfo({ contractName: "Escrow" });
+  const { data: orderCount } = useScaffoldReadContract({ contractName: "Escrow", functionName: "orderCount" });
+  const { data: arbiter } = useScaffoldReadContract({ contractName: "Escrow", functionName: "arbiter" });
+  const {
+    data: created,
+    error,
+    isLoading,
+    isFetchingNewEvent,
+    refetch,
+  } = useScaffoldEventHistory({
+    contractName: "Escrow",
+    eventName: "OrderCreated",
+    blocksBatchSize: 10,
+    watch: true,
+  });
+  const queryClient = useQueryClient();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const orderIds = [
+    ...new Set(created.flatMap(event => (typeof event?.args.id === "bigint" ? [event.args.id] : []))),
+  ].sort((a, b) => (a > b ? -1 : a < b ? 1 : 0));
+
+  const refresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.allSettled([refetch(), queryClient.invalidateQueries({ queryKey: ["readContract"] })]);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  return (
+    <main className="w-full max-w-screen-2xl mx-auto px-4 py-8 sm:px-8">
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-3xl font-bold mb-2">托管订单</h1>
+          <p className="my-0 opacity-70">查看订单，并按当前钱包角色发起争议或处理仲裁。</p>
+        </div>
+        <button className="btn btn-primary btn-sm" disabled={isRefreshing || !escrow} onClick={() => void refresh()}>
+          {isRefreshing ? "刷新中…" : "刷新订单"}
+        </button>
+      </div>
+
+      <div className="grid gap-4 mb-6 rounded-2xl bg-base-100 p-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div>
+          <p className="mt-0 mb-2 text-sm opacity-70">当前账户</p>
+          {address ? <Address address={address} size="sm" /> : <span>未连接钱包，可查看订单</span>}
+        </div>
+        <div>
+          <p className="mt-0 mb-2 text-sm opacity-70">托管合约 · {targetNetwork.name}</p>
+          {escrow ? <Address address={escrow.address} size="sm" /> : <span>合约读取中…</span>}
+        </div>
+        <div>
+          <p className="mt-0 mb-2 text-sm opacity-70">仲裁人</p>
+          {arbiter ? <Address address={arbiter} size="sm" /> : <span>读取中…</span>}
+        </div>
+        <div aria-live="polite">
+          <p className="mt-0 mb-2 text-sm opacity-70">已读取订单 / 链上订单数</p>
+          <span className="text-xl font-semibold">
+            {orderIds.length} / {orderCount?.toString() ?? "…"}
+          </span>
+        </div>
+      </div>
+
+      {!isContractLoading && !escrow && (
+        <p className="text-error" role="alert">
+          无法读取托管合约，请检查网络连接后重试。
+        </p>
+      )}
+      {error && (
+        <p className="text-error" role="alert">
+          订单列表读取失败，请点击“刷新订单”重试。
+        </p>
+      )}
+      {(isLoading || isFetchingNewEvent) && (
+        <p role="status">
+          <span className="loading loading-spinner loading-sm mr-2" aria-hidden="true" />
+          正在读取订单…
+        </p>
+      )}
+
+      <div className="overflow-x-auto rounded-2xl bg-base-100 shadow-sm">
+        <table className="table">
+          <caption className="sr-only">托管订单及当前钱包可执行的争议、仲裁操作</caption>
+          <thead>
+            <tr>
+              <th scope="col">订单号</th>
+              <th scope="col">买卖双方</th>
+              <th scope="col">金额 / 代币</th>
+              <th scope="col">状态</th>
+              <th scope="col">截止时间</th>
+              <th scope="col">描述</th>
+              <th scope="col">当前角色与操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            {orderIds.map(orderId => (
+              <EscrowOrderRow key={orderId.toString()} orderId={orderId} />
+            ))}
+            {!isLoading && !isFetchingNewEvent && !error && escrow && orderIds.length === 0 && (
+              <tr>
+                <td colSpan={7} className="text-center py-10">
+                  暂无订单
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </main>
+  );
+}
