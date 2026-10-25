@@ -1,0 +1,107 @@
+# Escrow 三人协作项目
+
+基于彭春沐实验三的完整项目，继续开发 `/escrow` 页面，使用彭在实验三部署的 Escrow 和代币合约。
+
+> 本仓库以彭的实验三源码为起点，选择大作业路线 B。`/escrow` 页面待三人按下方分工开发；现有项目包含 `/debug` 合约调试页面。
+
+原项目来源：`/home/student/blockchain-course/my-first-dapp`。原始说明保存在 [docs/UPSTREAM_README.md](docs/UPSTREAM_README.md)。
+
+协作仓库：[cm-10086/escrow-dapp-team](https://github.com/cm-10086/escrow-dapp-team)。私有仓库需要先获得访问权限再克隆。
+
+## 分工
+
+| 成员 | 开发任务 | 验收钱包角色 |
+| --- | --- | --- |
+| 彭春沐（组长） | 仓库整合、订单列表和订单读取 | 买家 |
+| 宋穗杰 | 创建订单、付款和确认收货按钮 | 卖家 |
+| 蔡焯泓 | 争议与仲裁按钮、角色判断、汇总验收数据 | 合约仲裁人 |
+
+开发分工与链上权限分别处理；验收交易以钱包实际地址及合约权限为准。
+
+## 合约基准
+
+使用 POTOS Testnet（chain ID：`60600`，RPC：`https://rpc-testnet.potos.hk`）。以下地址已与项目部署记录和链上代码核对：
+
+| 合约 | 地址 |
+| --- | --- |
+| 彭的 Escrow | `0x267dB7196845D6A1EE887889EeA581067aBe56Cb` |
+| 彭的代币 | `0x93c729e48c10EA7c5b7DC971f73DB2B130318631` |
+
+2026-10-25 的只读链上核验结果见 [docs/contract-verification.json](docs/contract-verification.json)：Escrow 已有 **5** 笔订单，仲裁人地址为 `0x5a11a430a712486394708358fa76a6688ffa6275`。订单数会继续变化，创建订单前应重新读取。
+
+已将 `packages/nextjs/contracts/deployedContracts.ts` 的 Escrow 地址从旧值 `0xE627B5721A9d849048F77eF6137DD2c3A1F69d4d` 修正为表中地址，与 `packages/hardhat/deployments/potos_testnet/Escrow.json` 一致。两份 Escrow 的运行代码一致，表中部署的 ABI 与项目部署记录一致。
+
+协作时保持以下配置一致：
+
+- 网络名称、chain ID 和 RPC 配置来自彭实验三的实际部署记录。
+- `deployedContracts.ts` 对应网络下的合约地址与上述两份合约一致。
+- ABI 与实际部署版本一致，前端读取及交易均引用这份配置。
+- 买家、卖家及仲裁人钱包地址与链上记录一致。
+
+不将其他成员部署的合约配置作为本项目基准。
+
+## 本地启动
+
+需要 Node.js `>=20.18.3`；项目固定使用 Yarn `3.2.3`。
+
+```sh
+corepack enable
+yarn install --immutable
+yarn start
+```
+
+在浏览器访问终端输出的本地地址，现有合约调试入口为 `/debug`。开发沿用已有测试网部署，无需先运行 `yarn chain` 或重新部署合约。
+
+常用检查命令：`yarn next:check-types`、`yarn hardhat:check-types`、`yarn lint`。首次编译生成 Hardhat 类型时使用 `yarn hardhat:compile`。现有 CI 已改为编译合约，不会因默认网络为测试网而尝试部署。
+
+## 环境变量
+
+运行路线 B 的页面使用 MetaMask 签名，无需在项目中配置私钥。保留模板中的空值即可开始连接已有部署。
+
+| 环境变量 | 位置与用途 |
+| --- | --- |
+| `NEXT_PUBLIC_ALCHEMY_API_KEY` | 前端可选 API 配置，见 `packages/nextjs/.env.example`；当前 POTOS 使用配置中的 RPC |
+| `NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID` | 前端可选 WalletConnect 配置 |
+| `ALCHEMY_API_KEY` | Hardhat 可选配置，用于对应 Alchemy 网络 |
+| `ETHERSCAN_V2_API_KEY` | Hardhat 可选合约验证配置 |
+| `__RUNTIME_DEPLOYER_PRIVATE_KEY` | 仅重新部署到公共网络时在终端环境注入；现有部署的页面开发无需设置 |
+| `DEPLOYER_PRIVATE_KEY_ENCRYPTED` | 可选加密账户工具配置，见 `packages/hardhat/.env.example` |
+
+前端可将示例复制为 `packages/nextjs/.env.local`，Hardhat 示例可复制为 `packages/hardhat/.env`；这些本地文件受 `.gitignore` 保护。`NEXT_PUBLIC_` 变量会进入浏览器代码，不能保存私钥或其他秘密。未注入部署私钥时公共网络账户列表为空，本地 Hardhat 测试仍使用其内置测试账户。
+
+## 开始协作
+
+1. 发布本仓库并共享同一个仓库链接，保留原有目录结构、依赖锁文件和部署记录。
+2. 按上方命令安装依赖并启动，确认钱包使用 POTOS Testnet。
+3. 三位成员从同一个 GitHub 仓库开始，各自建立功能分支。
+4. 彭整合订单列表和读取功能；宋与蔡分别提交各自负责的功能。
+5. 合并前检查 `/escrow` 使用的网络、地址和 ABI，完成联合验收。
+
+建议功能分支：`feat/order-list`、`feat/order-actions`、`feat/dispute-arbitration`。
+
+## 初始检查结果
+
+2026-10-25 在临时副本中复用原项目依赖检查：Solidity 编译、10 个合约测试、Hardhat 和前端 TypeScript 检查、Hardhat 和前端 lint 均通过。检查过程未使用公共网络签名账户。`/escrow` 的页面功能与三人业务验收尚待完成。
+
+## 验收记录
+
+彭的 Escrow 已有历史订单。新建两笔验收订单前，先读取链上的 `orderCount`，并记录创建交易实际生成的订单号。订单号以合约实现及交易事件为准，不预设为 `0` 和 `1`。
+
+以下是待填写的验收表，尚未执行大作业页面流程。正常成交和争议订单均使用实际新订单号；根据实际交易补齐记录，不用实验三历史流程代替页面验收。
+
+| 操作 | 实际订单号 | 发起账户 / 角色 | 交易哈希 | 区块浏览器链接 |
+| --- | --- | --- | --- | --- |
+| 实验三部署 Escrow | 不适用 | 彭 / 部署者 | `0x1e5f71706b8fcbad6bc91d40357874ce0adefb31637de5ffe2035082aeae21ea` | [查看交易](https://scan-testnet.potos.hk/tx/0x1e5f71706b8fcbad6bc91d40357874ce0adefb31637de5ffe2035082aeae21ea) |
+| 创建正常成交订单 | 待记录 | 彭 / 买家 | 待记录 | 待记录 |
+| 授权正常成交金额 | 待记录 | 彭 / 买家 | 待记录 | 待记录 |
+| 支付正常成交订单 | 待记录 | 彭 / 买家 | 待记录 | 待记录 |
+| 创建争议订单 | 待记录 | 彭 / 买家 | 待记录 | 待记录 |
+| 授权争议订单金额 | 待记录 | 彭 / 买家 | 待记录 | 待记录 |
+| 支付争议订单 | 待记录 | 彭 / 买家 | 待记录 | 待记录 |
+| 对争议订单发起争议 | 待记录 | 宋 / 卖家 | 待记录 | 待记录 |
+| 将争议订单退给买家 | 待记录 | 蔡 / 仲裁人 | 待记录 | 待记录 |
+| 确认正常成交订单 | 待记录 | 彭 / 买家 | 待记录 | 待记录 |
+
+报告模板中的“resolve 失败（路线 A）”不属于本组路线 B 的必做操作，按适用范围说明。保存 `4B-1` 至 `4B-6` 截图，完成 `4B-1` 至 `4B-5` 解释题，并注明本组实际数据和操作角色。
+
+仓库只提交代码和公开部署信息；环境变量使用去除密钥的示例文件。验收材料不记录私钥、助记词或 GitHub 访问令牌。

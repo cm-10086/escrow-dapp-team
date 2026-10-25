@@ -1,0 +1,15 @@
+{
+  "checkedAt": "2026-10-25T07:01:00.5015607Z",
+  "rpc": "https://rpc-testnet.potos.hk",
+  "chainId": 60600,
+  "observedBlock": 2677510,
+  "expectedEscrow": "0x267dB7196845D6A1EE887889EeA581067aBe56Cb",
+  "importedEscrow": "0x267dB7196845D6A1EE887889EeA581067aBe56Cb",
+  "expectedToken": "0x93c729e48c10EA7c5b7DC971f73DB2B130318631",
+  "expectedEscrowHasCode": true,
+  "expectedTokenHasCode": true,
+  "expectedMatchesImportedRuntime": true,
+  "expectedMatchesDeploymentRuntime": true,
+  "arbiter": "0x5a11a430a712486394708358fa76a6688ffa6275",
+  "orderCount": 5
+}

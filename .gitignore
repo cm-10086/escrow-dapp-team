@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# Environment and credentials
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+keystore/
+keystores/
+
+# Generated output (keep deployedContracts.ts and deployment records)
+.next/
+out/
+dist/
+build/
+coverage/
+cache/
+.turbo/
+.eslintcache
+*.tsbuildinfo
+
+# Local logs and editor state
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
