@@ -3,8 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "test:order-writes": "node --test tests/order-writes.test.mjs",
     "build": "next build",
     "check-types": "tsc --noEmit --incremental",
+    "test:events": "node --test utils/scaffold-eth/readEventsInBatches.test.mjs",
+    "test:roles": "node --test utils/escrow/accountRoles.test.mjs",
     "dev": "next dev",
     "format": "prettier --write . '!(node_modules|.next|contracts)/**/*'",
     "ipfs": "NEXT_PUBLIC_IPFS_BUILD=true yarn build && yarn bgipfs upload config init -u https://upload.bgipfs.com && CID=$(yarn bgipfs upload out | grep -o 'CID: [^ ]*' | cut -d' ' -f2) && [ ! -z \"$CID\" ] && echo '🚀 Upload complete! Your site is now available at: https://community.bgipfs.com/ipfs/'$CID || echo '❌ Upload failed'",

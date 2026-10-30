@@ -49,3 +49,12 @@ jobs:
 
       - name: Check typings on nextjs
         run: yarn next:check-types
+
+      - name: Test event query batching
+        run: yarn workspace @se-2/nextjs test:events
+
+      - name: Test account role summaries
+        run: yarn workspace @se-2/nextjs test:roles
+
+      - name: Test order creation, payment and confirmation
+        run: yarn workspace @se-2/nextjs test:order-writes
