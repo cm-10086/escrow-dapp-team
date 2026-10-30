@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "test:order-writes": "node --experimental-strip-types --test tests/order-writes.test.mjs",
     "build": "next build",
     "check-types": "tsc --noEmit --incremental",
     "dev": "next dev",
