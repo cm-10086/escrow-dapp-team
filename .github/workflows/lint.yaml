@@ -55,3 +55,6 @@ jobs:
 
       - name: Test account role summaries
         run: yarn workspace @se-2/nextjs test:roles
+
+      - name: Test order creation, payment and confirmation
+        run: yarn workspace @se-2/nextjs test:order-writes

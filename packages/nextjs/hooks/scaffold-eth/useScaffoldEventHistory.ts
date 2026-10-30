@@ -116,7 +116,8 @@ export const useScaffoldEventHistory = <
   const [lastFetchedBlock, setLastFetchedBlock] = useState<bigint | null>(null);
   const [isPollingActive, setIsPollingActive] = useState(false);
 
-  const { data: blockNumber } = useBlockNumber({ watch: watch, chainId: selectedNetwork.id });
+  // Manual invalidation after a confirmed write must bypass viem's block-height cache.
+  const { data: blockNumber } = useBlockNumber({ watch: watch, chainId: selectedNetwork.id, cacheTime: 0 });
 
   const { data: deployedContractData } = useDeployedContractInfo({
     contractName,

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CreateOrderForm } from "./_components/CreateOrderForm";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAccount } from "wagmi";
 import { EscrowAccountRoles } from "~~/components/escrow/EscrowAccountRoles";
@@ -52,7 +53,11 @@ export default function EscrowPage() {
   const refresh = async () => {
     setIsRefreshing(true);
     try {
-      await Promise.allSettled([refetch(), queryClient.invalidateQueries({ queryKey: ["readContract"] })]);
+      await Promise.allSettled([
+        queryClient.invalidateQueries({ queryKey: ["blockNumber"] }),
+        refetch(),
+        queryClient.invalidateQueries({ queryKey: ["readContract"] }),
+      ]);
     } finally {
       setIsRefreshing(false);
     }
@@ -63,7 +68,7 @@ export default function EscrowPage() {
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-3xl font-bold mb-2">托管订单</h1>
-          <p className="my-0 opacity-70">查看订单，并按当前钱包角色发起争议或处理仲裁。</p>
+          <p className="my-0 opacity-70">创建托管订单，并按当前钱包角色付款、确认收货、发起争议或处理仲裁。</p>
         </div>
         <button className="btn btn-primary btn-sm" disabled={isRefreshing || !escrow} onClick={() => void refresh()}>
           {isRefreshing ? "刷新中…" : "刷新订单"}
@@ -114,9 +119,13 @@ export default function EscrowPage() {
         </p>
       )}
 
+      <div className="mb-6">
+        <CreateOrderForm onCreated={() => void refresh()} />
+      </div>
+
       <div className="overflow-x-auto rounded-2xl bg-base-100 shadow-sm">
         <table className="table">
-          <caption className="sr-only">托管订单及当前钱包可执行的争议、仲裁操作</caption>
+          <caption className="sr-only">托管订单及当前钱包可执行的付款、确认收货、争议和仲裁操作</caption>
           <thead>
             <tr>
               <th scope="col">订单号</th>

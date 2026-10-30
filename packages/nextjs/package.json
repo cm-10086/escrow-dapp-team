@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "test:order-writes": "node --test tests/order-writes.test.mjs",
     "build": "next build",
     "check-types": "tsc --noEmit --incremental",
     "test:events": "node --test utils/scaffold-eth/readEventsInBatches.test.mjs",

@@ -3,6 +3,8 @@
 import { EscrowDisputeActions } from "./EscrowDisputeActions";
 import { Address as AddressType, erc20Abi, formatUnits } from "viem";
 import { useReadContract } from "wagmi";
+import { ConfirmButton } from "~~/app/escrow/_components/ConfirmButton";
+import { PayButton } from "~~/app/escrow/_components/PayButton";
 import { Address } from "~~/components/scaffold-eth";
 import { useScaffoldReadContract, useTargetNetwork } from "~~/hooks/scaffold-eth";
 
@@ -104,7 +106,9 @@ export function EscrowOrderRow({ orderId }: { orderId: bigint }) {
         )}
       </td>
       <td className="min-w-36 max-w-64 whitespace-normal break-words">{order.description || "无描述"}</td>
-      <td className="min-w-64">
+      <td className="min-w-64 space-y-4">
+        <PayButton orderId={orderId} order={order} onSuccess={() => void refetch()} />
+        <ConfirmButton orderId={orderId} order={order} onSuccess={() => void refetch()} />
         <EscrowDisputeActions
           orderId={orderId}
           order={{ buyer: order.buyer, seller: order.seller, status: order.status }}
