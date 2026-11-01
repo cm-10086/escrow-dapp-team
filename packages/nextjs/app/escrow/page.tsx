@@ -7,12 +7,8 @@ import { useAccount } from "wagmi";
 import { EscrowAccountRoles } from "~~/components/escrow/EscrowAccountRoles";
 import { EscrowOrderRow } from "~~/components/escrow/EscrowOrderRow";
 import { Address } from "~~/components/scaffold-eth";
-import {
-  useDeployedContractInfo,
-  useScaffoldEventHistory,
-  useScaffoldReadContract,
-  useTargetNetwork,
-} from "~~/hooks/scaffold-eth";
+import { useDeployedContractInfo, useScaffoldReadContract, useTargetNetwork } from "~~/hooks/scaffold-eth";
+import { useEscrowOrderHistory } from "~~/hooks/useEscrowOrderHistory";
 
 export default function EscrowPage() {
   const { address } = useAccount();
@@ -31,18 +27,18 @@ export default function EscrowPage() {
     error,
     isLoading,
     isFetchingNewEvent,
+    isSyncingHistory,
     refetch,
-  } = useScaffoldEventHistory({
-    contractName: "Escrow",
-    eventName: "OrderCreated",
-    blocksBatchSize: 10,
-    watch: true,
-  });
+  } = useEscrowOrderHistory(orderCount);
   const queryClient = useQueryClient();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [confirmedOrderIds, setConfirmedOrderIds] = useState<bigint[]>([]);
 
   const orderIds = [
-    ...new Set(created.flatMap(event => (typeof event?.args.id === "bigint" ? [event.args.id] : []))),
+    ...new Set([
+      ...confirmedOrderIds,
+      ...created.flatMap(event => (typeof event?.args.id === "bigint" ? [event.args.id] : [])),
+    ]),
   ].sort((a, b) => (a > b ? -1 : a < b ? 1 : 0));
 
   const roleDataFailed = Boolean(error || arbiterError || orderCountError || (!isContractLoading && !escrow));
@@ -112,15 +108,20 @@ export default function EscrowPage() {
           订单列表读取失败，请点击“刷新订单”重试。
         </p>
       )}
-      {(isLoading || isFetchingNewEvent) && (
+      {(isLoading || isSyncingHistory) && (
         <p role="status">
           <span className="loading loading-spinner loading-sm mr-2" aria-hidden="true" />
-          正在读取订单…
+          {isLoading ? "正在读取最新订单…" : "正在后台补读历史订单，已显示的订单可正常操作。"}
         </p>
       )}
 
       <div className="mb-6">
-        <CreateOrderForm onCreated={() => void refresh()} />
+        <CreateOrderForm
+          onCreated={id => {
+            setConfirmedOrderIds(previous => [...new Set([...previous, id])]);
+            void refresh();
+          }}
+        />
       </div>
 
       <div className="overflow-x-auto rounded-2xl bg-base-100 shadow-sm">
