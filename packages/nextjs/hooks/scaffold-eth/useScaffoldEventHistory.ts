@@ -74,6 +74,7 @@ const getEvents = async (
  * @param config.watch - if set to true, the events will be updated every pollingInterval milliseconds set at scaffoldConfig (default: false)
  * @param config.enabled - set this to false to disable the hook from running (default: true)
  * @param config.blocksBatchSize - optional batch size for fetching events. If specified, each batch will contain at most this many blocks (default: 500)
+ * @param config.scanFromLatest - read historical batches newest first (live polling always moves forwards)
  */
 export const useScaffoldEventHistory = <
   TContractName extends ContractName,
@@ -94,6 +95,7 @@ export const useScaffoldEventHistory = <
   watch,
   enabled = true,
   blocksBatchSize = 500,
+  scanFromLatest = false,
 }: UseScaffoldEventHistoryConfig<TContractName, TEventName, TBlockData, TTransactionData, TReceiptData>) => {
   if (!Number.isSafeInteger(blocksBatchSize) || blocksBatchSize <= 0) {
     throw new Error("blocksBatchSize must be a positive safe integer");
@@ -151,22 +153,30 @@ export const useScaffoldEventHistory = <
         chainId: selectedNetwork.id,
         filters: JSON.stringify(filters, replacer),
         blocksBatchSize: blocksBatchSize.toString(),
+        scanFromLatest,
       },
     ],
     queryFn: async ({ pageParam }) => {
       if (!isContractAddressAndClientReady || blockNumber === undefined) return undefined;
 
       // Calculate the toBlock for this batch
-      const batchEndBlock = pageParam + BigInt(blocksBatchSize) - 1n;
       const maxBlock = toBlock !== undefined && toBlock < blockNumber ? toBlock : blockNumber;
-      if (pageParam > maxBlock) return [];
+      if (fromBlockValue > maxBlock) return [];
+      const batchEndBlock = scanFromLatest ? pageParam : pageParam + BigInt(blocksBatchSize) - 1n;
       const batchToBlock = batchEndBlock < maxBlock ? batchEndBlock : maxBlock;
+      const reverseStart = batchToBlock - BigInt(blocksBatchSize) + 1n;
+      const batchFromBlock = scanFromLatest
+        ? reverseStart > fromBlockValue
+          ? reverseStart
+          : fromBlockValue
+        : pageParam;
+      if (batchFromBlock > batchToBlock) return [];
 
       const data = await getEvents(
         {
           address: deployedContractData?.address,
           event,
-          fromBlock: pageParam,
+          fromBlock: batchFromBlock,
           toBlock: batchToBlock,
           args: filters,
         },
@@ -179,9 +189,19 @@ export const useScaffoldEventHistory = <
       return data;
     },
     enabled: enabled && isContractAddressAndClientReady && blockNumber !== undefined && !isPollingActive,
-    initialPageParam: fromBlockValue,
+    initialPageParam:
+      scanFromLatest && blockNumber !== undefined
+        ? toBlock !== undefined && toBlock < blockNumber
+          ? toBlock
+          : blockNumber
+        : fromBlockValue,
     getNextPageParam: (lastPage, allPages, lastPageParam) => {
       if (blockNumber === undefined || fromBlockValue >= blockNumber) return undefined;
+
+      if (scanFromLatest) {
+        const previousBlock = lastPageParam - BigInt(blocksBatchSize);
+        return previousBlock >= fromBlockValue ? previousBlock : undefined;
+      }
 
       const nextBlock = lastPageParam + BigInt(blocksBatchSize);
 
@@ -217,7 +237,17 @@ export const useScaffoldEventHistory = <
 
   // Poll for new events when watch mode is enabled
   const liveQuery = useQuery({
-    queryKey: ["liveEvents", contractName, eventName, blockNumber?.toString(), lastFetchedBlock?.toString()],
+    queryKey: [
+      "liveEvents",
+      selectedNetwork.id,
+      deployedContractData?.address,
+      contractName,
+      eventName,
+      fromBlockValue.toString(),
+      toBlock?.toString(),
+      blockNumber?.toString(),
+      lastFetchedBlock?.toString(),
+    ],
     enabled: Boolean(
       watch &&
         enabled &&
@@ -264,6 +294,7 @@ export const useScaffoldEventHistory = <
   // Manual trigger to fetch next page when previous page completes (only when not polling)
   useEffect(() => {
     if (
+      enabled &&
       !isPollingActive &&
       query.status === "success" &&
       query.hasNextPage &&
@@ -272,7 +303,7 @@ export const useScaffoldEventHistory = <
     ) {
       query.fetchNextPage();
     }
-  }, [query, isPollingActive]);
+  }, [query, isPollingActive, enabled]);
 
   // Combine historical data from infinite query with live events from watch hook
   const historicalEvents = query.data?.pages || [];

@@ -304,6 +304,8 @@ export type UseScaffoldEventHistoryConfig<
   watch?: boolean;
   enabled?: boolean;
   blocksBatchSize?: number;
+  /** Scan historical batches from the newest block first. Live polling still moves forwards. */
+  scanFromLatest?: boolean;
 };
 
 export type UseScaffoldEventHistoryData<
