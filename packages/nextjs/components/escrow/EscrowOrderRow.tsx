@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { EscrowDisputeActions } from "./EscrowDisputeActions";
+import { EscrowOrderTimeline } from "./EscrowOrderTimeline";
 import { Address as AddressType, erc20Abi, formatUnits } from "viem";
 import { useReadContract } from "wagmi";
 import { ConfirmButton } from "~~/app/escrow/_components/ConfirmButton";
@@ -35,7 +37,8 @@ function OrderAmount({ token, amount }: { token: AddressType; amount: bigint }) 
   );
 }
 
-export function EscrowOrderRow({ orderId }: { orderId: bigint }) {
+export function EscrowOrderRow({ orderId, createdAtBlock }: { orderId: bigint; createdAtBlock?: bigint }) {
+  const [showTimeline, setShowTimeline] = useState(false);
   const {
     data: order,
     error,
@@ -78,43 +81,63 @@ export function EscrowOrderRow({ orderId }: { orderId: bigint }) {
   const isValidDeadline = Number.isFinite(deadline.getTime());
 
   return (
-    <tr>
-      <th scope="row">#{orderId.toString()}</th>
-      <td>
-        <div className="space-y-3">
-          <div>
-            <span className="text-xs opacity-70">买家</span>
-            <Address address={order.buyer} size="sm" />
+    <>
+      <tr>
+        <th scope="row">#{orderId.toString()}</th>
+        <td>
+          <div className="space-y-3">
+            <div>
+              <span className="text-xs opacity-70">买家</span>
+              <Address address={order.buyer} size="sm" />
+            </div>
+            <div>
+              <span className="text-xs opacity-70">卖家</span>
+              <Address address={order.seller} size="sm" />
+            </div>
           </div>
-          <div>
-            <span className="text-xs opacity-70">卖家</span>
-            <Address address={order.seller} size="sm" />
-          </div>
-        </div>
-      </td>
-      <td>
-        <OrderAmount token={order.token} amount={order.amount} />
-      </td>
-      <td aria-live="polite">
-        <span className="badge badge-outline whitespace-nowrap">{STATUS_LABELS[order.status] ?? "未知状态"}</span>
-      </td>
-      <td>
-        {isValidDeadline ? (
-          <time dateTime={deadline.toISOString()}>{deadline.toLocaleString("zh-CN", { hour12: false })}</time>
-        ) : (
-          <span>{order.deadline.toString()} 秒</span>
-        )}
-      </td>
-      <td className="min-w-36 max-w-64 whitespace-normal break-words">{order.description || "无描述"}</td>
-      <td className="min-w-64 space-y-4">
-        <PayButton orderId={orderId} order={order} onSuccess={() => void refetch()} />
-        <ConfirmButton orderId={orderId} order={order} onSuccess={() => void refetch()} />
-        <EscrowDisputeActions
-          orderId={orderId}
-          order={{ buyer: order.buyer, seller: order.seller, status: order.status }}
-          onConfirmed={() => void refetch()}
-        />
-      </td>
-    </tr>
+        </td>
+        <td>
+          <OrderAmount token={order.token} amount={order.amount} />
+        </td>
+        <td aria-live="polite">
+          <span className="badge badge-outline whitespace-nowrap">{STATUS_LABELS[order.status] ?? "未知状态"}</span>
+        </td>
+        <td>
+          {isValidDeadline ? (
+            <time dateTime={deadline.toISOString()}>{deadline.toLocaleString("zh-CN", { hour12: false })}</time>
+          ) : (
+            <span>{order.deadline.toString()} 秒</span>
+          )}
+        </td>
+        <td className="min-w-36 max-w-64 whitespace-normal break-words">{order.description || "无描述"}</td>
+        <td className="min-w-64 space-y-4">
+          <PayButton orderId={orderId} order={order} onSuccess={() => void refetch()} />
+          <ConfirmButton orderId={orderId} order={order} onSuccess={() => void refetch()} />
+          <EscrowDisputeActions
+            orderId={orderId}
+            order={{ buyer: order.buyer, seller: order.seller, status: order.status }}
+            onConfirmed={() => void refetch()}
+          />
+          <button
+            className="btn btn-ghost btn-sm"
+            aria-expanded={showTimeline}
+            aria-controls={`order-timeline-${orderId}`}
+            aria-label={`${showTimeline ? "收起" : "展开"}订单 #${orderId} 的时间线`}
+            onClick={() => setShowTimeline(previous => !previous)}
+          >
+            {showTimeline ? "收起时间线" : "展开时间线"}
+          </button>
+        </td>
+      </tr>
+      {showTimeline && (
+        <tr id={`order-timeline-${orderId}`}>
+          <td colSpan={7} className="p-0 sm:p-3">
+            <div className="sticky left-0 w-[calc(100vw-2rem)] sm:w-auto">
+              <EscrowOrderTimeline orderId={orderId} status={order.status} createdAtBlock={createdAtBlock} />
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
   );
 }

@@ -8,7 +8,11 @@ import { TransactionFeedback } from "./TransactionFeedback";
 import { Hash, decodeEventLog, erc20Abi, getAddress, isAddress, zeroAddress } from "viem";
 import { useReadContract, useWriteContract } from "wagmi";
 
-export function CreateOrderForm({ onCreated }: { onCreated?: (orderId: bigint, hash: Hash) => void }) {
+export function CreateOrderForm({
+  onCreated,
+}: {
+  onCreated?: (orderId: bigint, hash: Hash, blockNumber: bigint) => void;
+}) {
   const tx = useOrderTransaction();
   const { writeContractAsync } = useWriteContract();
   const [seller, setSeller] = useState("");
@@ -76,7 +80,7 @@ export function CreateOrderForm({ onCreated }: { onCreated?: (orderId: bigint, h
         }
         setCreatedId(id);
         void count.refetch();
-        onCreated?.(id, receipt.transactionHash);
+        onCreated?.(id, receipt.transactionHash, receipt.blockNumber);
         return;
       }
       throw new Error("交易已确认，但未解析到订单号；请按上方哈希核验，不要重复创建");

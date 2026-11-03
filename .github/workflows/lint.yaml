@@ -58,3 +58,6 @@ jobs:
 
       - name: Test order creation, payment and confirmation
         run: yarn workspace @se-2/nextjs test:order-writes
+
+      - name: Test order event timelines
+        run: yarn workspace @se-2/nextjs test:timeline

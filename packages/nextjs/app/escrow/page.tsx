@@ -32,11 +32,17 @@ export default function EscrowPage() {
   } = useEscrowOrderHistory(orderCount);
   const queryClient = useQueryClient();
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [confirmedOrderIds, setConfirmedOrderIds] = useState<bigint[]>([]);
+  const [confirmedOrderBlocks, setConfirmedOrderBlocks] = useState(new Map<bigint, bigint>());
+  const creationBlocks = new Map(confirmedOrderBlocks);
+  for (const event of created) {
+    if (typeof event?.args.id === "bigint" && typeof event.blockNumber === "bigint") {
+      creationBlocks.set(event.args.id, event.blockNumber);
+    }
+  }
 
   const orderIds = [
     ...new Set([
-      ...confirmedOrderIds,
+      ...confirmedOrderBlocks.keys(),
       ...created.flatMap(event => (typeof event?.args.id === "bigint" ? [event.args.id] : [])),
     ]),
   ].sort((a, b) => (a > b ? -1 : a < b ? 1 : 0));
@@ -117,8 +123,8 @@ export default function EscrowPage() {
 
       <div className="mb-6">
         <CreateOrderForm
-          onCreated={id => {
-            setConfirmedOrderIds(previous => [...new Set([...previous, id])]);
+          onCreated={(id, _hash, blockNumber) => {
+            setConfirmedOrderBlocks(previous => new Map(previous).set(id, blockNumber));
             void refresh();
           }}
         />
@@ -140,7 +146,7 @@ export default function EscrowPage() {
           </thead>
           <tbody>
             {orderIds.map(orderId => (
-              <EscrowOrderRow key={orderId.toString()} orderId={orderId} />
+              <EscrowOrderRow key={orderId.toString()} orderId={orderId} createdAtBlock={creationBlocks.get(orderId)} />
             ))}
             {!isLoading && !isFetchingNewEvent && !error && escrow && orderIds.length === 0 && (
               <tr>
