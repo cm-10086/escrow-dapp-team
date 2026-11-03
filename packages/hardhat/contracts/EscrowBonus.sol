@@ -3,7 +3,7 @@ pragma solidity >=0.8.0 <0.9.0;
 
 import { IERC20 } from "./Escrow.sol";
 
-/// @notice Bonus contract under development. Deploy after the planned arbitration upgrade is complete.
+/// @notice Combined shipping and two-of-two arbitration bonus contract.
 contract EscrowBonus {
     // Keep the original five numeric values stable; Shipped is appended.
     enum Status {
@@ -25,9 +25,13 @@ contract EscrowBonus {
         string description;
     }
 
-    address public arbiter;
+    address public immutable arbiter;
+    address public immutable arbiter2;
     uint256 public orderCount;
     mapping(uint256 => Order) private _orders;
+    // 0 = not voted, 1 = refund buyer, 2 = pay seller. A false vote must not look like no vote.
+    mapping(uint256 => mapping(address => uint8)) public resolutionVotes;
+    mapping(uint256 => uint256) public lastResolutionVoteBlock;
 
     event OrderCreated(
         uint256 indexed id,
@@ -43,6 +47,7 @@ contract EscrowBonus {
     event OrderRefunded(uint256 indexed id);
     event OrderDisputed(uint256 indexed id, address by);
     event OrderResolved(uint256 indexed id, bool sellerWins);
+    event ResolutionVoted(uint256 indexed id, address indexed arbiter, bool sellerWins);
 
     modifier onlyBuyer(uint256 id) {
         require(msg.sender == _orders[id].buyer, "Escrow: caller is not the buyer");
@@ -55,7 +60,7 @@ contract EscrowBonus {
     }
 
     modifier onlyArbiter() {
-        require(msg.sender == arbiter, "Escrow: caller is not the arbiter");
+        require(msg.sender == arbiter || msg.sender == arbiter2, "Escrow: caller is not an arbiter");
         _;
     }
 
@@ -64,12 +69,18 @@ contract EscrowBonus {
         _;
     }
 
-    constructor(address _arbiter) {
-        require(_arbiter != address(0), "Escrow: arbiter is the zero address");
+    constructor(address _arbiter, address _arbiter2) {
+        require(_arbiter != address(0) && _arbiter2 != address(0), "Escrow: arbiter is the zero address");
+        require(_arbiter != _arbiter2, "Escrow: arbiters must be distinct");
         arbiter = _arbiter;
+        arbiter2 = _arbiter2;
     }
 
     function supportsShipping() external pure returns (bool) {
+        return true;
+    }
+
+    function supportsDualArbitration() external pure returns (bool) {
         return true;
     }
 
@@ -140,6 +151,14 @@ contract EscrowBonus {
     }
 
     function resolve(uint256 id, bool sellerWins) public onlyArbiter inStatus(id, Status.Disputed) {
+        uint8 decision = sellerWins ? 2 : 1;
+        require(resolutionVotes[id][msg.sender] != decision, "Escrow: same vote already submitted");
+        // A changed opinion is allowed while disputed; repeating one's vote never counts as a second signer.
+        resolutionVotes[id][msg.sender] = decision;
+        lastResolutionVoteBlock[id] = block.number;
+        emit ResolutionVoted(id, msg.sender, sellerWins);
+        if (resolutionVotes[id][arbiter] != decision || resolutionVotes[id][arbiter2] != decision) return;
+
         Order storage order = _orders[id];
         order.status = sellerWins ? Status.Completed : Status.Refunded;
         require(

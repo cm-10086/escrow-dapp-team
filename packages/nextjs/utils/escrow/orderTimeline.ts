@@ -29,6 +29,7 @@ const EVENT_NAMES = new Set([
   "OrderRefunded",
   "OrderResolved",
   "OrderShipped",
+  "ResolutionVoted",
 ]);
 
 /** Keep only confirmed events for this order, in their actual execution order. */
@@ -75,12 +76,32 @@ export function hasTimelineTarget(events: readonly OrderTimelineEvent[], status:
   });
 }
 
-export function isOrderTimelineComplete(events: readonly OrderTimelineEvent[], status: number): boolean {
+export function isOrderTimelineComplete(
+  events: readonly OrderTimelineEvent[],
+  status: number,
+  requireArbitrationVotes = false,
+): boolean {
   const has = (name: string) => events.some(event => event.eventName === name);
   if (!has("OrderCreated") || !hasTimelineTarget(events, status)) return false;
   if (status === 0) return true;
   if (!has("OrderPaid")) return false;
   if (events.some(event => event.eventName === "OrderResolved") && !has("OrderDisputed")) return false;
+  const resolved = events.find(event => event.eventName === "OrderResolved");
+  if (requireArbitrationVotes && resolved) {
+    const decisions = new Map<string, boolean>();
+    for (const event of events) {
+      if (event === resolved) break;
+      if (
+        event.eventName === "ResolutionVoted" &&
+        typeof event.args.arbiter === "string" &&
+        typeof event.args.sellerWins === "boolean"
+      ) {
+        decisions.set(event.args.arbiter.toLowerCase(), event.args.sellerWins);
+      }
+    }
+    if (decisions.size !== 2 || [...decisions.values()].some(choice => choice !== resolved.args.sellerWins))
+      return false;
+  }
   return true;
 }
 
@@ -100,6 +121,8 @@ export function getTimelineEventLabel(event: OrderTimelineEvent): string {
       return "超期退款";
     case "OrderResolved":
       return event.args.sellerWins === true ? "仲裁放款给卖家" : "仲裁退款给买家";
+    case "ResolutionVoted":
+      return event.args.sellerWins === true ? "仲裁投票：判给卖家" : "仲裁投票：退给买家";
     default:
       return event.eventName;
   }
@@ -118,6 +141,8 @@ export async function readOrderTimeline({
   fromBlock,
   toBlock,
   status,
+  arbitrationVoteBlock,
+  requireArbitrationVotes = false,
   readBatch,
   signal,
   onProgress,
@@ -126,12 +151,16 @@ export async function readOrderTimeline({
   fromBlock: bigint;
   toBlock: bigint;
   status: number;
+  arbitrationVoteBlock?: bigint;
+  requireArbitrationVotes?: boolean;
   readBatch: (from: bigint, to: bigint) => Promise<readonly OrderTimelineLog[] | undefined>;
   signal?: AbortSignal;
   onProgress?: (eventCount: number, throughBlock: bigint) => void;
 }): Promise<OrderTimelineResult> {
   if (fromBlock < 0n || toBlock < fromBlock) throw new Error("订单创建区块尚未确认，请稍后刷新");
   if (![0, 1, 2, 3, 4, 5].includes(status)) throw new Error("当前订单状态尚不支持此时间线");
+  if (arbitrationVoteBlock !== undefined && (arbitrationVoteBlock < fromBlock || arbitrationVoteBlock > toBlock))
+    throw new Error("仲裁状态已变化，请刷新时间线");
   let events: OrderTimelineEvent[] = [];
   let throughBlock = fromBlock;
   for (let from = fromBlock; from <= toBlock; from += 10n) {
@@ -143,7 +172,15 @@ export async function readOrderTimeline({
     events = normalizeOrderTimeline([...events, ...batch], orderId);
     throughBlock = to;
     onProgress?.(events.length, throughBlock);
-    if (hasTimelineTarget(events, status)) break;
+    if (hasTimelineTarget(events, status) && (arbitrationVoteBlock === undefined || to >= arbitrationVoteBlock)) break;
   }
-  return { events, complete: isOrderTimelineComplete(events, status), status, throughBlock };
+  const latestVoteFound =
+    arbitrationVoteBlock === undefined ||
+    events.some(event => event.eventName === "ResolutionVoted" && event.blockNumber === arbitrationVoteBlock);
+  return {
+    events,
+    complete: latestVoteFound && isOrderTimelineComplete(events, status, requireArbitrationVotes),
+    status,
+    throughBlock,
+  };
 }

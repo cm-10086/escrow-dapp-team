@@ -3,15 +3,17 @@ import { EscrowOrderParticipants, getEscrowAccountRoles } from "~~/utils/escrow/
 export function EscrowAccountRoles({
   account,
   arbiter,
+  arbiters,
   orders,
   dataState,
 }: {
   account?: string;
   arbiter?: string;
+  arbiters?: readonly string[];
   orders: readonly EscrowOrderParticipants[];
   dataState: "loading" | "ready" | "error";
 }) {
-  const roles = getEscrowAccountRoles({ account, arbiter, orders });
+  const roles = getEscrowAccountRoles({ account, arbiter, arbiters, orders });
   const fallback = !account
     ? "未连接"
     : dataState === "error"

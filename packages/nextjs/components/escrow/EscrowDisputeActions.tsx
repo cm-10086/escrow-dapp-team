@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { EscrowDualArbitrationActions } from "./EscrowDualArbitrationActions";
 import { useAccount } from "wagmi";
 import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { useShippingSupport } from "~~/hooks/useShippingSupport";
@@ -19,6 +20,16 @@ type Props = {
 };
 
 export function EscrowDisputeActions({ orderId, order, onConfirmed }: Props) {
+  const support = useShippingSupport();
+  if (!order) return <span>订单读取中…</span>;
+  return support.configured ? (
+    <EscrowDualArbitrationActions orderId={orderId} order={order} onConfirmed={onConfirmed} />
+  ) : (
+    <LegacyEscrowDisputeActions orderId={orderId} order={order} onConfirmed={onConfirmed} />
+  );
+}
+
+function LegacyEscrowDisputeActions({ orderId, order, onConfirmed }: Props) {
   const { address } = useAccount();
   const support = useShippingSupport();
   const { data: arbiter } = useScaffoldReadContract({ contractName: "Escrow", functionName: "arbiter" });

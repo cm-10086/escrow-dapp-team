@@ -10,10 +10,18 @@ export function useShippingSupport() {
     chainId: 60600,
     query: { enabled: escrowDeployment.isBonus, retry: false },
   });
+  const arbitration = useReadContract({
+    address: escrowDeployment.address,
+    abi: escrowBonusAbi,
+    functionName: "supportsDualArbitration",
+    chainId: 60600,
+    query: { enabled: escrowDeployment.isBonus, retry: false },
+  });
   return {
-    enabled: escrowDeployment.isBonus && query.data === true,
+    // Only the combined release may be selected as the bonus deployment.
+    enabled: escrowDeployment.isBonus && query.data === true && arbitration.data === true,
     configured: escrowDeployment.isBonus,
-    isLoading: escrowDeployment.isBonus && query.isLoading,
-    error: query.error,
+    isLoading: escrowDeployment.isBonus && (query.isLoading || arbitration.isLoading),
+    error: query.error ?? arbitration.error,
   };
 }

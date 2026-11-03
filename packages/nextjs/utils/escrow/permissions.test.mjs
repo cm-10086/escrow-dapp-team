@@ -15,6 +15,19 @@ const buyer = "0x5a11A430A712486394708358fa76a6688FFA6275";
 const seller = "0x84707E0f5d7d22486818eb3b3F9fAda2D5Dd909e";
 const arbiter = "0xDD22eDe4D64E611519099bAF7813B5b10294b20B";
 
+test("任一仲裁人可以投票，兼任买家仍可在已发货时确认或争议", () => {
+  for (const account of [buyer, seller]) {
+    assert.equal(
+      getEscrowPermissions({ account, buyer, seller, arbiters: [buyer, seller], status: 4 }).canResolve,
+      true,
+    );
+  }
+  const overlap = getEscrowPermissions({ account: buyer, buyer, seller, arbiters: [buyer, arbiter], status: 5 });
+  assert.equal(overlap.canConfirm, true);
+  assert.equal(overlap.canDispute, true);
+  assert.equal(overlap.canResolve, false);
+});
+
 test("已发货后买家可确认，买卖双方可争议，旁观者不能操作", () => {
   for (const account of [buyer, seller, arbiter, undefined]) {
     const p = getEscrowPermissions({ account, buyer, seller, arbiter, status: 5 });

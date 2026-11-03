@@ -225,3 +225,44 @@ test("shipping stops at its snapshot and remains in completed or arbitrated hist
   }
   assert.equal(isOrderTimelineComplete(normalizeOrderTimeline(prefix.slice(1), 7n), 5), false);
 });
+
+test("pending arbitration includes later votes without scanning empty blocks to today's head", async () => {
+  const events = [
+    log("OrderCreated", 100n),
+    log("OrderPaid", 101n),
+    log("OrderDisputed", 102n),
+    log("ResolutionVoted", 115n, { args: { id: 7n, arbiter: "A", sellerWins: false } }),
+  ];
+  const run = read(events, 4, { arbitrationVoteBlock: 115n, requireArbitrationVotes: true });
+  const result = await run.result;
+  assert.equal(result.complete, true);
+  assert.equal(result.events.length, 4);
+  assert.equal(run.ranges.length, 2);
+  assert.equal(getTimelineEventLabel(result.events.at(-1)), "仲裁投票：退给买家");
+  assert.equal((await read(events.slice(0, 3), 4, { arbitrationVoteBlock: 115n }).result).complete, false);
+});
+
+test("dual arbitration completeness requires two different latest matching votes before settlement", async () => {
+  const prefix = [log("OrderCreated", 100n), log("OrderPaid", 101n), log("OrderDisputed", 102n)];
+  const vote = (arbiter, sellerWins, block) => log("ResolutionVoted", block, { args: { id: 7n, arbiter, sellerWins } });
+  const resolved = log("OrderResolved", 106n, { args: { id: 7n, sellerWins: false } });
+  for (const decisions of [
+    [],
+    [vote("A", false, 103n)],
+    [vote("A", false, 103n), vote("A", false, 104n)],
+    [vote("A", false, 103n), vote("B", true, 104n)],
+  ]) {
+    assert.equal(
+      isOrderTimelineComplete(normalizeOrderTimeline([...prefix, ...decisions, resolved], 7n), 3, true),
+      false,
+    );
+  }
+  const result = await read(
+    [...prefix, vote("A", false, 103n), vote("B", true, 104n), vote("B", false, 105n), resolved],
+    3,
+    { requireArbitrationVotes: true },
+  ).result;
+  assert.equal(result.complete, true);
+  assert.equal(result.events.length, 7);
+  assert.equal(isOrderTimelineComplete(normalizeOrderTimeline([...prefix, resolved], 7n), 3), true);
+});

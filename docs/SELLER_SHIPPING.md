@@ -2,9 +2,9 @@
 
 ## 当前交付状态
 
-发货合约、页面、时间线及自动测试已接入。**尚未部署到 POTOS 测试网，也没有产生本项的真实验收订单或交易哈希。** 按组长安排，双人仲裁完成后，在同一份加分合约上整合、重新测试，再统一部署一次。
+发货合约、页面、时间线及自动测试已接入，并已在同一份合约整合双人仲裁，见 [DUAL_ARBITRATION.md](DUAL_ARBITRATION.md)。**尚未部署到 POTOS 测试网，也没有产生本项的真实验收订单或交易哈希。** 后续统一部署一次即可包含两项加分功能。
 
-`packages/hardhat/contracts/Escrow.sol`、原部署记录、实验三 Escrow 地址 `0x267dB7196845D6A1EE887889EeA581067aBe56Cb` 保留。新增 `EscrowBonus.sol` 在原业务流程基础上实现发货；目前仍使用单仲裁人，不能作为双人仲裁已完成的证明。原 #7、#8 等订单继续属于原地址，新合约不会继承其订单或余额。
+`packages/hardhat/contracts/Escrow.sol`、原部署记录、实验三 Escrow 地址 `0x267dB7196845D6A1EE887889EeA581067aBe56Cb` 保留。新增 `EscrowBonus.sol` 在原业务流程基础上实现发货与双人仲裁。原 #7、#8 等订单继续属于原地址，新合约不会继承其订单或余额。
 
 ## 状态及权限
 
@@ -16,7 +16,7 @@
 | `refund(id)` | 订单买家、Paid、链上时间严格超过截止时间 | Refunded，退款给买家 |
 | `confirm(id)` | 订单买家、Paid 或 Shipped | Completed，放款给卖家 |
 | `dispute(id)` | 买卖任一方、Paid 或 Shipped | Disputed |
-| `resolve(id, sellerWins)` | 当前单仲裁人、Disputed | Completed 或 Refunded |
+| `resolve(id, sellerWins)` | 两名指定仲裁人、Disputed | 先记录意见；两人一致时 Completed 或 Refunded |
 
 发货后的订单，即使超期也不能直接 `refund`，应确认收货或通过争议仲裁结算。卖家在到期后不能补标发货，以免撤销买家已经获得的未发货退款权。付款也必须在截止时间内进行。所有限制均在合约中执行，页面隐藏按钮并非权限保障。
 
@@ -36,7 +36,7 @@ NEXT_PUBLIC_ESCROW_BONUS_ADDRESS=
 NEXT_PUBLIC_ESCROW_BONUS_DEPLOY_BLOCK=
 ```
 
-地址来自未来实际部署回执；区块填写该部署交易的区块号。空值继续使用实验三地址。禁止填旧地址、零地址、缺失或无效区块。配置加分地址后会读取 `supportsShipping()`，核验成功前 `/escrow` 的交易按钮禁用。列表、时间线、争议和创建/付款/确认使用同一份选中的地址与 ABI。
+地址来自未来实际部署回执；区块填写该部署交易的区块号。空值继续使用实验三地址。禁止填旧地址、零地址、缺失或无效区块。配置加分地址后会同时读取 `supportsShipping()`、`supportsDualArbitration()`，核验成功前 `/escrow` 的交易按钮禁用。列表、时间线、争议和创建/付款/确认使用同一份选中的地址与 ABI。
 
 ABI 通过编译产物生成：先执行 `yarn hardhat:compile`，再执行 `node scripts/export-escrow-bonus-abi.cjs`。该命令仅导出 ABI，不会部署合约。CI 使用 `--check` 防止 ABI 过期。双人仲裁修改 ABI 后也应重新生成。
 

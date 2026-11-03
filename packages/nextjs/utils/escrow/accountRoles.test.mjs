@@ -55,3 +55,15 @@ test("an unrelated connected wallet has no order identities", () => {
 test("missing event participants or arbiter data do not invent an identity", () => {
   assert.deepEqual(getEscrowAccountRoles({ account: buyer, orders: [{}, { seller }, { buyer: stranger }] }), []);
 });
+
+test("either arbiter is recognized, including a buyer or seller with two roles", () => {
+  for (const account of [buyer, seller])
+    assert.deepEqual(getEscrowAccountRoles({ account, arbiters: [buyer, seller], orders: [order] }), [
+      "仲裁人",
+      account === buyer ? "买家" : "卖家",
+    ]);
+  assert.deepEqual(
+    getEscrowAccountRoles({ account: arbiter.toLowerCase(), arbiters: [stranger, arbiter], orders: [] }),
+    ["仲裁人"],
+  );
+});

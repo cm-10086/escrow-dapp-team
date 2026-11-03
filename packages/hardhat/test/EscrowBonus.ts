@@ -4,14 +4,14 @@ import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 
 const AMOUNT = ethers.parseUnits("30", 18);
 async function fixture() {
-  const [owner, buyer, seller, arbiter, outsider] = await ethers.getSigners();
+  const [owner, buyer, seller, arbiter, outsider, arbiter2] = await ethers.getSigners();
   const token = await ethers.deployContract("PCMToken");
-  const escrow = await ethers.deployContract("EscrowBonus", [arbiter.address]);
+  const escrow = await ethers.deployContract("EscrowBonus", [arbiter.address, arbiter2.address]);
   await token.mint(buyer.address, AMOUNT * 4n);
   const deadline = (await time.latest()) + 600;
   await escrow.connect(buyer).createOrder(seller.address, await token.getAddress(), AMOUNT, deadline, "发货测试");
   await token.connect(buyer).approve(await escrow.getAddress(), AMOUNT * 4n);
-  return { owner, buyer, seller, arbiter, outsider, token, escrow, deadline };
+  return { owner, buyer, seller, arbiter, arbiter2, outsider, token, escrow, deadline };
 }
 async function paidFixture() {
   const state = await fixture();
@@ -103,14 +103,17 @@ describe("EscrowBonus seller shipping", () => {
     for (const sellerWins of [false, true]) {
       it(`${party} can dispute shipped goods and arbiter resolve(${sellerWins}) settles correctly`, async () => {
         const state = await loadFixture(shippedFixture);
-        const { escrow, arbiter, buyer, seller, outsider, token } = state;
+        const { escrow, arbiter, arbiter2, buyer, seller, outsider, token } = state;
         await expect(escrow.connect(outsider).dispute(0)).to.be.revertedWith("Escrow: caller is not a party");
         await escrow.connect(state[party]).dispute(0);
         expect((await escrow.getOrder(0)).status).to.equal(4n);
         await expect(escrow.connect(buyer).resolve(0, sellerWins)).to.be.revertedWith(
-          "Escrow: caller is not the arbiter",
+          "Escrow: caller is not an arbiter",
         );
-        await expect(escrow.connect(arbiter).resolve(0, sellerWins))
+        await escrow.connect(arbiter).resolve(0, sellerWins);
+        expect((await escrow.getOrder(0)).status).to.equal(4n);
+        expect(await token.balanceOf(await escrow.getAddress())).to.equal(AMOUNT);
+        await expect(escrow.connect(arbiter2).resolve(0, sellerWins))
           .to.emit(escrow, "OrderResolved")
           .withArgs(0n, sellerWins);
         expect((await escrow.getOrder(0)).status).to.equal(sellerWins ? 2n : 3n);

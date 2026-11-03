@@ -8,6 +8,7 @@ import { EscrowAccountRoles } from "~~/components/escrow/EscrowAccountRoles";
 import { EscrowOrderRow } from "~~/components/escrow/EscrowOrderRow";
 import { Address } from "~~/components/scaffold-eth";
 import { useDeployedContractInfo, useScaffoldReadContract, useTargetNetwork } from "~~/hooks/scaffold-eth";
+import { useEscrowArbiters } from "~~/hooks/useEscrowArbiters";
 import { useEscrowOrderHistory } from "~~/hooks/useEscrowOrderHistory";
 import { useShippingSupport } from "~~/hooks/useShippingSupport";
 
@@ -20,10 +21,7 @@ export default function EscrowPage() {
     contractName: "Escrow",
     functionName: "orderCount",
   });
-  const { data: arbiter, error: arbiterError } = useScaffoldReadContract({
-    contractName: "Escrow",
-    functionName: "arbiter",
-  });
+  const { arbiters, ready: arbitersReady, error: arbiterError } = useEscrowArbiters();
   const {
     data: created,
     error,
@@ -51,7 +49,7 @@ export default function EscrowPage() {
 
   const roleDataFailed = Boolean(error || arbiterError || orderCountError || (!isContractLoading && !escrow));
   const roleDataReady = Boolean(
-    escrow && arbiter !== undefined && orderCount !== undefined && !isLoading && BigInt(orderIds.length) >= orderCount,
+    escrow && arbitersReady && orderCount !== undefined && !isLoading && BigInt(orderIds.length) >= orderCount,
   );
 
   const refresh = async () => {
@@ -81,12 +79,12 @@ export default function EscrowPage() {
 
       <div className="mb-6 rounded-xl bg-base-100 p-4 text-sm" role="status">
         {!shipping.configured
-          ? "当前使用实验三合约，暂不支持发货；新版合约部署并配置后可使用发货功能。"
+          ? "当前使用实验三合约；新版合约部署并配置后可使用发货和双人仲裁功能。"
           : shipping.isLoading
-            ? "正在核验加分合约的发货功能…"
+            ? "正在核验加分合约的发货和双人仲裁功能…"
             : shipping.enabled
-              ? "当前为加分版合约：卖家可在到期前标记发货，已发货订单不能超期退款。"
-              : "当前配置地址未通过发货功能核验，写操作已禁用，请核对新版部署地址与网络。"}
+              ? "当前为加分版合约：已发货订单不能超期退款；两名仲裁人意见一致后才会结算。"
+              : "当前配置地址未通过发货与双人仲裁核验，写操作已禁用，请核对新版部署地址与网络。"}
       </div>
 
       <div className="grid gap-4 mb-6 rounded-2xl bg-base-100 p-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -95,7 +93,7 @@ export default function EscrowPage() {
           {address ? <Address address={address} size="sm" /> : <span>未连接钱包，可查看订单</span>}
           <EscrowAccountRoles
             account={address}
-            arbiter={arbiter}
+            arbiters={arbiters}
             orders={created.map(event => event?.args ?? {})}
             dataState={roleDataFailed ? "error" : roleDataReady ? "ready" : "loading"}
           />
@@ -105,8 +103,17 @@ export default function EscrowPage() {
           {escrow ? <Address address={escrow.address} size="sm" /> : <span>合约读取中…</span>}
         </div>
         <div>
-          <p className="mt-0 mb-2 text-sm opacity-70">仲裁人</p>
-          {arbiter ? <Address address={arbiter} size="sm" /> : <span>读取中…</span>}
+          <p className="mt-0 mb-2 text-sm opacity-70">{shipping.configured ? "双人仲裁 · 两人一致生效" : "仲裁人"}</p>
+          {arbiters.length ? (
+            arbiters.map((arbiter, index) => (
+              <div key={arbiter} className="mb-2">
+                {shipping.configured && <span className="text-xs opacity-70">仲裁人 {index + 1}</span>}
+                <Address address={arbiter} size="sm" />
+              </div>
+            ))
+          ) : (
+            <span>{arbiterError ? "读取失败，请刷新重试" : "读取中…"}</span>
+          )}
         </div>
         <div aria-live="polite">
           <p className="mt-0 mb-2 text-sm opacity-70">已读取订单 / 链上订单数</p>

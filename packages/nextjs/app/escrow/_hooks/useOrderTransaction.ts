@@ -35,7 +35,8 @@ export function useOrderTransaction() {
     setMessage("正在检查钱包与链上状态…");
     try {
       if (!client) throw new Error("网络尚未就绪，请稍后重试");
-      if (shipping.configured && !shipping.enabled) throw new Error("新版合约尚未通过发货功能核验，请检查地址与网络");
+      if (shipping.configured && !shipping.enabled)
+        throw new Error("新版合约尚未通过发货与双人仲裁核验，请检查地址与网络");
       // A timeout is not a failed transaction. Resolve its receipt before allowing a new write.
       if (unresolved.current) {
         const hash = unresolved.current;

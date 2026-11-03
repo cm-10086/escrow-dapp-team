@@ -8,6 +8,11 @@ export const escrowBonusAbi = [
         name: "_arbiter",
         type: "address",
       },
+      {
+        internalType: "address",
+        name: "_arbiter2",
+        type: "address",
+      },
     ],
     stateMutability: "nonpayable",
     type: "constructor",
@@ -152,8 +157,46 @@ export const escrowBonusAbi = [
     type: "event",
   },
   {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "uint256",
+        name: "id",
+        type: "uint256",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "arbiter",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "bool",
+        name: "sellerWins",
+        type: "bool",
+      },
+    ],
+    name: "ResolutionVoted",
+    type: "event",
+  },
+  {
     inputs: [],
     name: "arbiter",
+    outputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "arbiter2",
     outputs: [
       {
         internalType: "address",
@@ -302,6 +345,25 @@ export const escrowBonusAbi = [
     inputs: [
       {
         internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    name: "lastResolutionVoteBlock",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
         name: "id",
         type: "uint256",
       },
@@ -341,6 +403,30 @@ export const escrowBonusAbi = [
     inputs: [
       {
         internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+    ],
+    name: "resolutionVotes",
+    outputs: [
+      {
+        internalType: "uint8",
+        name: "",
+        type: "uint8",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
         name: "id",
         type: "uint256",
       },
@@ -353,6 +439,19 @@ export const escrowBonusAbi = [
     name: "resolve",
     outputs: [],
     stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "supportsDualArbitration",
+    outputs: [
+      {
+        internalType: "bool",
+        name: "",
+        type: "bool",
+      },
+    ],
+    stateMutability: "pure",
     type: "function",
   },
   {

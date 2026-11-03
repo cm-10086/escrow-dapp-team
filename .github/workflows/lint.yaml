@@ -67,3 +67,6 @@ jobs:
 
       - name: Test shipping, refund and deployment selection
         run: yarn workspace @se-2/nextjs test:shipping
+
+      - name: Test dual arbitration preflight and vote progress
+        run: yarn workspace @se-2/nextjs test:arbitration
