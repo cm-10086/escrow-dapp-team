@@ -10,6 +10,7 @@ export type EscrowPermissionInput = {
   buyer: string;
   seller: string;
   arbiter?: string;
+  arbiters?: readonly string[];
   status: number | bigint;
 };
 
@@ -18,6 +19,7 @@ export const getEscrowPermissions = ({
   buyer,
   seller,
   arbiter,
+  arbiters = [],
   status,
 }: EscrowPermissionInput): EscrowPermissions => {
   if (!account) {
@@ -27,8 +29,8 @@ export const getEscrowPermissions = ({
   const current = account.toLowerCase();
   const isBuyer = current === buyer.toLowerCase();
   const isSeller = current === seller.toLowerCase();
-  const isArbiter = Boolean(arbiter && current === arbiter.toLowerCase());
-  const isPaid = Number(status) === 1;
+  const isArbiter = [arbiter, ...arbiters].some(address => address?.toLowerCase() === current);
+  const isPaid = Number(status) === 1 || Number(status) === 5;
   const isDisputed = Number(status) === 4;
 
   return {

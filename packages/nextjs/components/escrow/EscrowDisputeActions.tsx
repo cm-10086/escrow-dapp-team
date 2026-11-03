@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { EscrowDualArbitrationActions } from "./EscrowDualArbitrationActions";
 import { useAccount } from "wagmi";
 import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import { useShippingSupport } from "~~/hooks/useShippingSupport";
 import { getEscrowPermissions } from "~~/utils/escrow/permissions";
 
 export type EscrowOrderForActions = {
@@ -18,7 +20,18 @@ type Props = {
 };
 
 export function EscrowDisputeActions({ orderId, order, onConfirmed }: Props) {
+  const support = useShippingSupport();
+  if (!order) return <span>订单读取中…</span>;
+  return support.configured ? (
+    <EscrowDualArbitrationActions orderId={orderId} order={order} onConfirmed={onConfirmed} />
+  ) : (
+    <LegacyEscrowDisputeActions orderId={orderId} order={order} onConfirmed={onConfirmed} />
+  );
+}
+
+function LegacyEscrowDisputeActions({ orderId, order, onConfirmed }: Props) {
   const { address } = useAccount();
+  const support = useShippingSupport();
   const { data: arbiter } = useScaffoldReadContract({ contractName: "Escrow", functionName: "arbiter" });
   const { writeContractAsync, isMining } = useScaffoldWriteContract({ contractName: "Escrow" });
   const [pendingAction, setPendingAction] = useState<string | null>(null);
@@ -34,13 +47,14 @@ export function EscrowDisputeActions({ orderId, order, onConfirmed }: Props) {
     arbiter,
     status: order.status,
   });
-  const disabled = Boolean(pendingAction) || isMining;
+  const disabled = Boolean(pendingAction) || isMining || (support.configured && !support.enabled);
 
   const submit = async (action: "dispute" | "resolve", sellerWins?: boolean) => {
     setPendingAction(action);
     setLastHash(null);
     setError(null);
     try {
+      if (support.configured && !support.enabled) throw new Error("加分合约尚未通过核验");
       const hash =
         action === "dispute"
           ? await writeContractAsync({ functionName: "dispute", args: [orderId] })

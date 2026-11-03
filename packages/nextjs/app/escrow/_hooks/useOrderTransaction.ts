@@ -5,10 +5,12 @@ import { CHAIN_ID } from "../_lib/contracts";
 import { Hash, TransactionReceipt } from "viem";
 import { useAccount, useConfig, usePublicClient } from "wagmi";
 import { getAccount } from "wagmi/actions";
+import { useShippingSupport } from "~~/hooks/useShippingSupport";
 
 export type TransactionRecord = { label: string; hash: Hash; confirmed: boolean };
 
 export function useOrderTransaction() {
+  const shipping = useShippingSupport();
   const config = useConfig();
   const account = useAccount();
   const client = usePublicClient({ chainId: CHAIN_ID });
@@ -33,6 +35,8 @@ export function useOrderTransaction() {
     setMessage("正在检查钱包与链上状态…");
     try {
       if (!client) throw new Error("网络尚未就绪，请稍后重试");
+      if (shipping.configured && !shipping.enabled)
+        throw new Error("新版合约尚未通过发货与双人仲裁核验，请检查地址与网络");
       // A timeout is not a failed transaction. Resolve its receipt before allowing a new write.
       if (unresolved.current) {
         const hash = unresolved.current;
@@ -114,6 +118,7 @@ export function useOrderTransaction() {
     records,
     client,
     account,
-    ready: account.isConnected && account.chainId === CHAIN_ID && !!client,
+    ready:
+      account.isConnected && account.chainId === CHAIN_ID && !!client && (!shipping.configured || shipping.enabled),
   };
 }

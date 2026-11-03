@@ -1,3 +1,4 @@
+import { selectedEscrow } from "./selectedEscrow";
 import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
 
 /**
@@ -11,6 +12,6 @@ import { GenericContractsDeclaration } from "~~/utils/scaffold-eth/contract";
  *   },
  * } as const;
  */
-const externalContracts = {} as const;
+const externalContracts = { 60600: { Escrow: selectedEscrow } } as const;
 
 export default externalContracts satisfies GenericContractsDeclaration;

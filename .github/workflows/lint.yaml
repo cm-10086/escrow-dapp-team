@@ -35,6 +35,9 @@ jobs:
       - name: Compile contracts
         run: yarn hardhat:compile
 
+      - name: Verify shipping ABI matches compiled contract
+        run: node scripts/export-escrow-bonus-abi.cjs --check
+
       - name: Run contract tests on the local Hardhat network
         run: yarn hardhat:test
 
@@ -61,3 +64,9 @@ jobs:
 
       - name: Test order event timelines
         run: yarn workspace @se-2/nextjs test:timeline
+
+      - name: Test shipping, refund and deployment selection
+        run: yarn workspace @se-2/nextjs test:shipping
+
+      - name: Test dual arbitration preflight and vote progress
+        run: yarn workspace @se-2/nextjs test:arbitration

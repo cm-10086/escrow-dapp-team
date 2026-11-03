@@ -19,7 +19,7 @@ export function ConfirmButton({
   const tx = useOrderTransaction();
   const { writeContractAsync } = useWriteContract();
   const [received, setReceived] = useState(false);
-  const eligible = isBuyer(order, tx.account.address) && order.status === 1;
+  const eligible = isBuyer(order, tx.account.address) && (order.status === 1 || order.status === 5);
   if (!eligible && tx.records.length === 0) return null;
   const confirm = () =>
     void tx.run(async ({ account, assertWallet, send }) => {

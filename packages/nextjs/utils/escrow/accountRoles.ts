@@ -9,17 +9,19 @@ export type EscrowOrderParticipants = {
 export function getEscrowAccountRoles({
   account,
   arbiter,
+  arbiters = [],
   orders,
 }: {
   account?: string;
   arbiter?: string;
+  arbiters?: readonly string[];
   orders: readonly EscrowOrderParticipants[];
 }): EscrowAccountRole[] {
   if (!account) return [];
   const current = account.toLowerCase();
   const roles: EscrowAccountRole[] = [];
 
-  if (arbiter?.toLowerCase() === current) roles.push("仲裁人");
+  if ([arbiter, ...arbiters].some(address => address?.toLowerCase() === current)) roles.push("仲裁人");
   if (orders.some(order => order.buyer?.toLowerCase() === current)) roles.push("买家");
   if (orders.some(order => order.seller?.toLowerCase() === current)) roles.push("卖家");
 

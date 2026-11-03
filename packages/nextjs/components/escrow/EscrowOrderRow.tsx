@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { EscrowDisputeActions } from "./EscrowDisputeActions";
 import { EscrowOrderTimeline } from "./EscrowOrderTimeline";
+import { EscrowShippingActions } from "./EscrowShippingActions";
 import { Address as AddressType, erc20Abi, formatUnits } from "viem";
 import { useReadContract } from "wagmi";
 import { ConfirmButton } from "~~/app/escrow/_components/ConfirmButton";
@@ -10,7 +11,7 @@ import { PayButton } from "~~/app/escrow/_components/PayButton";
 import { Address } from "~~/components/scaffold-eth";
 import { useScaffoldReadContract, useTargetNetwork } from "~~/hooks/scaffold-eth";
 
-const STATUS_LABELS = ["待付款", "已付款", "已完成", "已退款", "争议中"];
+const STATUS_LABELS = ["待付款", "已付款", "已完成", "已退款", "争议中", "已发货"];
 
 function OrderAmount({ token, amount }: { token: AddressType; amount: bigint }) {
   const { targetNetwork } = useTargetNetwork();
@@ -113,6 +114,7 @@ export function EscrowOrderRow({ orderId, createdAtBlock }: { orderId: bigint; c
         <td className="min-w-64 space-y-4">
           <PayButton orderId={orderId} order={order} onSuccess={() => void refetch()} />
           <ConfirmButton orderId={orderId} order={order} onSuccess={() => void refetch()} />
+          <EscrowShippingActions orderId={orderId} order={order} onSuccess={() => void refetch()} />
           <EscrowDisputeActions
             orderId={orderId}
             order={{ buyer: order.buyer, seller: order.seller, status: order.status }}

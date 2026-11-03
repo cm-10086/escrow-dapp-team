@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePublicClient } from "wagmi";
+import { escrowBonusAbi } from "~~/contracts/escrowBonusAbi";
+import { escrowDeployment } from "~~/contracts/selectedEscrow";
 import { useDeployedContractInfo, useTargetNetwork } from "~~/hooks/scaffold-eth";
 import scaffoldConfig from "~~/scaffold.config";
 import { OrderTimelineResult, readOrderTimeline } from "~~/utils/escrow/orderTimeline";
@@ -38,11 +40,23 @@ export function useEscrowOrderTimeline(orderId: bigint, status: number, createdA
         args: [orderId],
         blockNumber: head,
       });
+      const lastVoteBlock =
+        escrowDeployment.isBonus && current.status === 4
+          ? await client.readContract({
+              address: escrow.address,
+              abi: escrowBonusAbi,
+              functionName: "lastResolutionVoteBlock",
+              args: [orderId],
+              blockNumber: head,
+            })
+          : 0n;
       return readOrderTimeline({
         orderId,
         fromBlock: createdAtBlock,
         toBlock: head,
         status: current.status,
+        arbitrationVoteBlock: lastVoteBlock || undefined,
+        requireArbitrationVotes: escrowDeployment.isBonus,
         signal,
         onProgress: count => setProgress({ scope, count }),
         readBatch: (from, to) =>
