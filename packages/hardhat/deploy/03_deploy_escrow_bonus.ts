@@ -2,7 +2,11 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { DeployFunction } from "hardhat-deploy/types";
 
 const deployEscrowBonus: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
-  const addresses = [process.env.ESCROW_BONUS_ARBITER_1, process.env.ESCROW_BONUS_ARBITER_2];
+  // Agreed public wallets: Cai (first) and Peng (second, also the buyer).
+  const addresses = [
+    process.env.ESCROW_BONUS_ARBITER_1?.trim() || "0x5a11A430A712486394708358fa76a6688FFA6275",
+    process.env.ESCROW_BONUS_ARBITER_2?.trim() || "0xDD22eDe4D64E611519099bAF7813B5b10294b20B",
+  ];
   if (addresses.some(address => !address || !hre.ethers.isAddress(address))) {
     throw new Error("Set ESCROW_BONUS_ARBITER_1 and ESCROW_BONUS_ARBITER_2 to the two agreed public wallet addresses.");
   }

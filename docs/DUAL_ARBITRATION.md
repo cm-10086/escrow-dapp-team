@@ -36,9 +36,16 @@
 
 ## 统一部署的准备（本次未执行）
 
-部署前由小组确认两名仲裁人的**公开钱包地址**；蔡原地址为 `0x5a11A430A712486394708358fa76a6688FFA6275`，第二人不预设。两人均需要测试网 POT 支付各自投票的 gas，不需要为了仲裁进行代币 approve。
+两名仲裁人的公开钱包地址已由组长确认，部署脚本和 `.env.example` 使用以下默认配置：
 
-`03_deploy_escrow_bonus.ts` 只负责新建 EscrowBonus，默认跳过，需显式设置 `DEPLOY_ESCROW_BONUS=true` 和 `ESCROW_BONUS_ARBITER_1`、`ESCROW_BONUS_ARBITER_2`。使用 `EscrowBonus` 标签单独部署该合约，可继续复用原 PCMToken；不必重新部署旧 Escrow 或代币。公共网络部署沿用项目既有的签名账户方式，私钥不进入前端或仓库。
+| 顺序 | 成员 | 公开钱包地址 |
+| --- | --- | --- |
+| 第一名 | 蔡焯泓 | `0x5a11A430A712486394708358fa76a6688FFA6275` |
+| 第二名 | 彭春沐（兼任买家） | `0xDD22eDe4D64E611519099bAF7813B5b10294b20B` |
+
+两人均需要测试网 POT 支付各自投票的 gas，不需要为了仲裁进行代币 approve。此处是新合约的待部署配置；实际生效仍须以未来部署回执和链上 `arbiter()`、`arbiter2()` 返回值核对。
+
+`03_deploy_escrow_bonus.ts` 只负责新建 EscrowBonus，默认跳过，需显式设置 `DEPLOY_ESCROW_BONUS=true`。仲裁地址默认使用上表；终端或 Hardhat 环境文件中的 `ESCROW_BONUS_ARBITER_1`、`ESCROW_BONUS_ARBITER_2` 可覆盖默认值，部署前需确认没有遗留覆盖。使用 `EscrowBonus` 标签单独部署该合约，可继续复用原 PCMToken；不必重新部署旧 Escrow 或代币。公共网络部署沿用项目既有的签名账户方式，私钥不进入前端或仓库。
 
 完成部署并核对回执后，将真实地址和部署区块成对填写到 `packages/nextjs/.env.local` 的 `NEXT_PUBLIC_ESCROW_BONUS_ADDRESS`、`NEXT_PUBLIC_ESCROW_BONUS_DEPLOY_BLOCK`，重启页面。部署记录、ABI 和构造参数必须与实际结果一致。原地址的 #7、#8 等订单不会迁移到新合约。
 
