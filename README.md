@@ -6,6 +6,8 @@
 
 原项目来源：`/home/student/blockchain-course/my-first-dapp`。原始说明保存在 [docs/UPSTREAM_README.md](docs/UPSTREAM_README.md)。
 
+卖家发货状态的代码见独立的 `EscrowBonus.sol`，页面已预留新版地址配置并接入发货、未发货超期退款及发货时间线。**该加分版尚未部署**，等双人仲裁整合后统一部署；当前默认继续使用原 Escrow。启用方式及真实验收步骤见 [docs/SELLER_SHIPPING.md](docs/SELLER_SHIPPING.md)。
+
 协作仓库：[cm-10086/escrow-dapp-team](https://github.com/cm-10086/escrow-dapp-team)。私有仓库需要先获得访问权限再克隆。
 
 ## 分工

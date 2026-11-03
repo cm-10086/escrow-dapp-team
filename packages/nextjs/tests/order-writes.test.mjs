@@ -122,9 +122,9 @@ test("deposit rejection is reported and never retried automatically", async () =
   await assert.rejects(payOrder(buyer, p.port), /deposit rejected/);
   assert.equal(calls, 1);
 });
-test("confirm only accepts the buyer of a Paid order", async () => {
+test("confirm only accepts the buyer of a Paid or Shipped order", async () => {
   let writes = 0;
-  for (const status of [0, 1, 2, 3, 4]) {
+  for (const status of [0, 1, 2, 3, 4, 5]) {
     for (const account of [buyer, seller]) {
       const flow = () =>
         confirmOrder(account, {
@@ -134,9 +134,9 @@ test("confirm only accepts the buyer of a Paid order", async () => {
             writes++;
           },
         });
-      if (status === 1 && account === buyer) await flow();
+      if ([1, 5].includes(status) && account === buyer) await flow();
       else await assert.rejects(flow());
     }
   }
-  assert.equal(writes, 1);
+  assert.equal(writes, 2);
 });

@@ -9,8 +9,10 @@ import { EscrowOrderRow } from "~~/components/escrow/EscrowOrderRow";
 import { Address } from "~~/components/scaffold-eth";
 import { useDeployedContractInfo, useScaffoldReadContract, useTargetNetwork } from "~~/hooks/scaffold-eth";
 import { useEscrowOrderHistory } from "~~/hooks/useEscrowOrderHistory";
+import { useShippingSupport } from "~~/hooks/useShippingSupport";
 
 export default function EscrowPage() {
+  const shipping = useShippingSupport();
   const { address } = useAccount();
   const { targetNetwork } = useTargetNetwork();
   const { data: escrow, isLoading: isContractLoading } = useDeployedContractInfo({ contractName: "Escrow" });
@@ -75,6 +77,16 @@ export default function EscrowPage() {
         <button className="btn btn-primary btn-sm" disabled={isRefreshing || !escrow} onClick={() => void refresh()}>
           {isRefreshing ? "刷新中…" : "刷新订单"}
         </button>
+      </div>
+
+      <div className="mb-6 rounded-xl bg-base-100 p-4 text-sm" role="status">
+        {!shipping.configured
+          ? "当前使用实验三合约，暂不支持发货；新版合约部署并配置后可使用发货功能。"
+          : shipping.isLoading
+            ? "正在核验加分合约的发货功能…"
+            : shipping.enabled
+              ? "当前为加分版合约：卖家可在到期前标记发货，已发货订单不能超期退款。"
+              : "当前配置地址未通过发货功能核验，写操作已禁用，请核对新版部署地址与网络。"}
       </div>
 
       <div className="grid gap-4 mb-6 rounded-2xl bg-base-100 p-5 sm:grid-cols-2 lg:grid-cols-4">

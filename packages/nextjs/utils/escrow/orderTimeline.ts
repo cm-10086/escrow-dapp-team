@@ -28,6 +28,7 @@ const EVENT_NAMES = new Set([
   "OrderCompleted",
   "OrderRefunded",
   "OrderResolved",
+  "OrderShipped",
 ]);
 
 /** Keep only confirmed events for this order, in their actual execution order. */
@@ -59,6 +60,7 @@ export function hasTimelineTarget(events: readonly OrderTimelineEvent[], status:
     if (status === 0) return event.eventName === "OrderCreated";
     if (status === 1) return event.eventName === "OrderPaid";
     if (status === 4) return event.eventName === "OrderDisputed";
+    if (status === 5) return event.eventName === "OrderShipped";
     if (status === 2) {
       return (
         event.eventName === "OrderCompleted" || (event.eventName === "OrderResolved" && event.args.sellerWins === true)
@@ -88,6 +90,8 @@ export function getTimelineEventLabel(event: OrderTimelineEvent): string {
       return "创建订单";
     case "OrderPaid":
       return "付款入托管";
+    case "OrderShipped":
+      return "卖家已发货";
     case "OrderDisputed":
       return "发起争议";
     case "OrderCompleted":
@@ -127,7 +131,7 @@ export async function readOrderTimeline({
   onProgress?: (eventCount: number, throughBlock: bigint) => void;
 }): Promise<OrderTimelineResult> {
   if (fromBlock < 0n || toBlock < fromBlock) throw new Error("订单创建区块尚未确认，请稍后刷新");
-  if (![0, 1, 2, 3, 4].includes(status)) throw new Error("当前订单状态尚不支持此时间线");
+  if (![0, 1, 2, 3, 4, 5].includes(status)) throw new Error("当前订单状态尚不支持此时间线");
   let events: OrderTimelineEvent[] = [];
   let throughBlock = fromBlock;
   for (let from = fromBlock; from <= toBlock; from += 10n) {

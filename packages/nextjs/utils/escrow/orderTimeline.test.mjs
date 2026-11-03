@@ -194,7 +194,7 @@ test("block zero and large bigint heights retain inclusive 10-block boundaries",
 });
 
 test("invalid creation ranges and unknown statuses reject rather than claiming an empty complete history", async () => {
-  for (const options of [{ fromBlock: -1n }, { fromBlock: 200n, toBlock: 100n }, { status: 5 }]) {
+  for (const options of [{ fromBlock: -1n }, { fromBlock: 200n, toBlock: 100n }, { status: 6 }]) {
     await assert.rejects(
       readOrderTimeline({
         orderId: 7n,
@@ -206,4 +206,22 @@ test("invalid creation ranges and unknown statuses reject rather than claiming a
       }),
     );
   }
+});
+
+test("shipping stops at its snapshot and remains in completed or arbitrated histories", async () => {
+  const prefix = [log("OrderCreated", 100n), log("OrderPaid", 101n), log("OrderShipped", 111n)];
+  const shipping = read(prefix, 5);
+  const result = await shipping.result;
+  assert.equal(result.complete, true);
+  assert.equal(shipping.ranges.length, 2);
+  assert.equal(getTimelineEventLabel(result.events.at(-1)), "卖家已发货");
+  for (const [status, extra] of [
+    [2, [log("OrderCompleted", 121n)]],
+    [3, [log("OrderDisputed", 121n), log("OrderResolved", 122n, { args: { id: 7n, sellerWins: false } })]],
+  ]) {
+    const history = await read([...prefix, ...extra], status).result;
+    assert.equal(history.complete, true);
+    assert.equal(history.events[2].eventName, "OrderShipped");
+  }
+  assert.equal(isOrderTimelineComplete(normalizeOrderTimeline(prefix.slice(1), 7n), 5), false);
 });

@@ -8,7 +8,7 @@ export type Order = {
   description: string;
 };
 
-export const orderStatuses = ["Created", "Paid", "Completed", "Refunded", "Disputed"] as const;
+export const orderStatuses = ["Created", "Paid", "Completed", "Refunded", "Disputed", "Shipped"] as const;
 
 export function isBuyer(order: Order, account?: string) {
   return !!account && order.buyer.toLowerCase() === account.toLowerCase();
@@ -67,7 +67,8 @@ export async function confirmOrder(
 ) {
   port.assertWallet();
   const order = await port.readOrder();
-  if (!isBuyer(order, account) || order.status !== 1) throw new Error("只有该订单买家可确认 Paid 订单");
+  if (!isBuyer(order, account) || (order.status !== 1 && order.status !== 5))
+    throw new Error("只有该订单买家可确认已付款或已发货订单");
   port.assertWallet();
   await port.confirm();
 }

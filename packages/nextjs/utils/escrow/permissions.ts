@@ -28,7 +28,7 @@ export const getEscrowPermissions = ({
   const isBuyer = current === buyer.toLowerCase();
   const isSeller = current === seller.toLowerCase();
   const isArbiter = Boolean(arbiter && current === arbiter.toLowerCase());
-  const isPaid = Number(status) === 1;
+  const isPaid = Number(status) === 1 || Number(status) === 5;
   const isDisputed = Number(status) === 4;
 
   return {
