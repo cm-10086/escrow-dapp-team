@@ -43,6 +43,43 @@
 
 原合约由蔡单人仲裁；加分合约由蔡和彭共同仲裁。新合约使用独立订单计数和托管余额，原合约订单不会自动迁移。订单号必须连同合约地址一起识别。
 
+## 交易记录表
+
+以下按任务书要求列出“操作、交易哈希、区块浏览器链接、发起账户”四列。基础路线使用原 Escrow 的真实订单 #7、#8，分别对应正常成交和争议退款，不照抄任务书的示例编号。
+
+### 必做路线 B
+
+| 操作                           | 交易哈希                                                             | 区块浏览器链接                                                                                              | 发起账户                                     |
+| ------------------------------ | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| 实验三部署 Escrow（路线 B）    | `0x1e5f71706b8fcbad6bc91d40357874ce0adefb31637de5ffe2035082aeae21ea` | [查看](https://scan-testnet.potos.hk/tx/0x1e5f71706b8fcbad6bc91d40357874ce0adefb31637de5ffe2035082aeae21ea) | `0xDD22eDe4D64E611519099bAF7813B5b10294b20B` |
+| createOrder 订单 7             | `0x4187137d8a0c567056e514a297e195f1b36b727055e11e9f967e15b61c3cdc03` | [查看](https://scan-testnet.potos.hk/tx/0x4187137d8a0c567056e514a297e195f1b36b727055e11e9f967e15b61c3cdc03) | `0xDD22eDe4D64E611519099bAF7813B5b10294b20B` |
+| approve（订单 7 付款前）       | `0xfdb2a0ff88811601dfe43893e1d8001df0fbc4fbe40aa836a0912ca0c0eb7cfa` | [查看](https://scan-testnet.potos.hk/tx/0xfdb2a0ff88811601dfe43893e1d8001df0fbc4fbe40aa836a0912ca0c0eb7cfa) | `0xDD22eDe4D64E611519099bAF7813B5b10294b20B` |
+| deposit 订单 7                 | `0xfaf17ea84ca13fd25a97e98b9117c086276a656e85f1e0a310b5462b27eb7aeb` | [查看](https://scan-testnet.potos.hk/tx/0xfaf17ea84ca13fd25a97e98b9117c086276a656e85f1e0a310b5462b27eb7aeb) | `0xDD22eDe4D64E611519099bAF7813B5b10294b20B` |
+| createOrder 订单 8             | `0xbb056559a1c23fa18797909b3ff0fce454db5c4ec73c37f4fb155c641a5c1ec3` | [查看](https://scan-testnet.potos.hk/tx/0xbb056559a1c23fa18797909b3ff0fce454db5c4ec73c37f4fb155c641a5c1ec3) | `0xDD22eDe4D64E611519099bAF7813B5b10294b20B` |
+| deposit 订单 8                 | `0x1423b35bff5ae195f8a318f58538d5380e5f8b7a42dfbe49bde6cb3eb6d40a97` | [查看](https://scan-testnet.potos.hk/tx/0x1423b35bff5ae195f8a318f58538d5380e5f8b7a42dfbe49bde6cb3eb6d40a97) | `0xDD22eDe4D64E611519099bAF7813B5b10294b20B` |
+| dispute 订单 8                 | `0x8f48c3557f067e2849808e1c5fb51c42e70f3f281f49a56df925a65d627a6120` | [查看](https://scan-testnet.potos.hk/tx/0x8f48c3557f067e2849808e1c5fb51c42e70f3f281f49a56df925a65d627a6120) | `0x84707E0f5d7d22486818eb3b3F9fAda2D5Dd909e` |
+| resolve 订单 8（退款）         | `0x93154b497287200c783ce37a442de6df666ee56b0280b8c87cf89d1e7f6f4792` | [查看](https://scan-testnet.potos.hk/tx/0x93154b497287200c783ce37a442de6df666ee56b0280b8c87cf89d1e7f6f4792) | `0x5a11A430A712486394708358fa76a6688FFA6275` |
+| confirm 订单 7                 | `0x2009e035580323dc6cf7bcba8eebd4d8777da7780f58e3fb29b9fb464f03c8c0` | [查看](https://scan-testnet.potos.hk/tx/0x2009e035580323dc6cf7bcba8eebd4d8777da7780f58e3fb29b9fb464f03c8c0) | `0xDD22eDe4D64E611519099bAF7813B5b10294b20B` |
+| resolve 失败（路线 A 第 6 步） | 不适用（本组选择路线 B）                                             | —                                                                                                           | —                                            |
+
+表内共 9 笔成功交易；路线 A 的失败项不适用，不计入实际交易数。授权发生在代币合约，括号中的订单号仅说明后续付款用途。
+
+### 加分项关键交易
+
+下表使用 EscrowBonus 的实际订单 #0、#1、#2，与报告的加分项交易表对应。创建、授权、付款等完整记录见 [验收文档](docs/ACCEPTANCE.md#加分项交易记录)。
+
+| 操作                             | 交易哈希                                                             | 区块浏览器链接                                                                                              | 发起账户                                     |
+| -------------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| 部署 EscrowBonus                 | `0x84a4df0a785707e818f11ef035538fd6fcbfbe7c4562f02e17f97d5275b8802d` | [查看](https://scan-testnet.potos.hk/tx/0x84a4df0a785707e818f11ef035538fd6fcbfbe7c4562f02e17f97d5275b8802d) | `0xDD22eDe4D64E611519099bAF7813B5b10294b20B` |
+| markShipped 订单 0               | `0x9ab11302259adc0c00fa84412ca5982cc45693e1837151e17b9b6854ab08cf62` | [查看](https://scan-testnet.potos.hk/tx/0x9ab11302259adc0c00fa84412ca5982cc45693e1837151e17b9b6854ab08cf62) | `0x84707E0f5d7d22486818eb3b3F9fAda2D5Dd909e` |
+| confirm 订单 0                   | `0xd28db867082ab6ec4fb6b142857bce555a5abfe2c346ea8dd29b6e27c3fc1e87` | [查看](https://scan-testnet.potos.hk/tx/0xd28db867082ab6ec4fb6b142857bce555a5abfe2c346ea8dd29b6e27c3fc1e87) | `0xDD22eDe4D64E611519099bAF7813B5b10294b20B` |
+| markShipped 订单 2               | `0xc93435d2375cc1127d965bde8c885609bd088c2d14c8f53e1e869da39c438ad3` | [查看](https://scan-testnet.potos.hk/tx/0xc93435d2375cc1127d965bde8c885609bd088c2d14c8f53e1e869da39c438ad3) | `0x84707E0f5d7d22486818eb3b3F9fAda2D5Dd909e` |
+| dispute 订单 2                   | `0xdf63a773de8c766761062b02ae8f4a4dad83ef2fbd6d749e1cf2ceef4850e6b3` | [查看](https://scan-testnet.potos.hk/tx/0xdf63a773de8c766761062b02ae8f4a4dad83ef2fbd6d749e1cf2ceef4850e6b3) | `0x84707E0f5d7d22486818eb3b3F9fAda2D5Dd909e` |
+| resolve 订单 2（蔡：判给卖家）   | `0xdedfe37a88d1a1151474bdea7779556779a5c39350d74800ef6a4c74137ad3c3` | [查看](https://scan-testnet.potos.hk/tx/0xdedfe37a88d1a1151474bdea7779556779a5c39350d74800ef6a4c74137ad3c3) | `0x5a11A430A712486394708358fa76a6688FFA6275` |
+| resolve 订单 2（彭：退给买家）   | `0x1a98ca0cea714ca99db9ac9658086cb1c19852afa6ab8af0f3a5d6b4dd4c5f68` | [查看](https://scan-testnet.potos.hk/tx/0x1a98ca0cea714ca99db9ac9658086cb1c19852afa6ab8af0f3a5d6b4dd4c5f68) | `0xDD22eDe4D64E611519099bAF7813B5b10294b20B` |
+| resolve 订单 2（彭：改投并结算） | `0x33fcd2214ab5e6c40fbdc761dba1d94d2439574f7902ac76fb51cb930bf66a63` | [查看](https://scan-testnet.potos.hk/tx/0x33fcd2214ab5e6c40fbdc761dba1d94d2439574f7902ac76fb51cb930bf66a63) | `0xDD22eDe4D64E611519099bAF7813B5b10294b20B` |
+| refund 订单 1                    | `0x7b57560283e9557f9e4f38ece31283eb615f264ce6628338f6e4a29e06163226` | [查看](https://scan-testnet.potos.hk/tx/0x7b57560283e9557f9e4f38ece31283eb615f264ce6628338f6e4a29e06163226) | `0xDD22eDe4D64E611519099bAF7813B5b10294b20B` |
+
 ## 本地启动
 
 需要 Node.js `>=20.18.3`，项目固定使用 Yarn `3.2.3`。私有仓库须先获得访问权限；已下载 ZIP 的成员直接进入解压后的项目根目录即可。
