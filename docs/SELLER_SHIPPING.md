@@ -2,7 +2,7 @@
 
 ## 当前交付状态
 
-发货合约、页面、时间线及自动测试已接入，并已在同一份合约整合双人仲裁，见 [DUAL_ARBITRATION.md](DUAL_ARBITRATION.md)。**尚未部署到 POTOS 测试网，也没有产生本项的真实验收订单或交易哈希。** 后续统一部署一次即可包含两项加分功能。
+发货合约、页面、时间线及自动测试已接入，并与双人仲裁统一部署至 POTOS 测试网。实际地址为 `0x307816f6C24820700Fe11fdA93CeD97C1834190f`，部署区块为 `2800063`。2026-11-07 的 #0 发货后确认、#1 未发货超期退款、#2 发货后争议与双人裁决记录见 [ACCEPTANCE.md](ACCEPTANCE.md)，仲裁规则见 [DUAL_ARBITRATION.md](DUAL_ARBITRATION.md)。
 
 `packages/hardhat/contracts/Escrow.sol`、原部署记录、实验三 Escrow 地址 `0x267dB7196845D6A1EE887889EeA581067aBe56Cb` 保留。新增 `EscrowBonus.sol` 在原业务流程基础上实现发货与双人仲裁。原 #7、#8 等订单继续属于原地址，新合约不会继承其订单或余额。
 
@@ -10,13 +10,13 @@
 
 保留原数值 Created=0、Paid=1、Completed=2、Refunded=3、Disputed=4，追加 Shipped=5。
 
-| 操作 | 条件 | 结果 |
-| --- | --- | --- |
-| `markShipped(id)` | 订单卖家、Paid、链上时间不超过截止时间 | Shipped，发出 OrderShipped，资金继续托管 |
-| `refund(id)` | 订单买家、Paid、链上时间严格超过截止时间 | Refunded，退款给买家 |
-| `confirm(id)` | 订单买家、Paid 或 Shipped | Completed，放款给卖家 |
-| `dispute(id)` | 买卖任一方、Paid 或 Shipped | Disputed |
-| `resolve(id, sellerWins)` | 两名指定仲裁人、Disputed | 先记录意见；两人一致时 Completed 或 Refunded |
+| 操作                      | 条件                                     | 结果                                         |
+| ------------------------- | ---------------------------------------- | -------------------------------------------- |
+| `markShipped(id)`         | 订单卖家、Paid、链上时间不超过截止时间   | Shipped，发出 OrderShipped，资金继续托管     |
+| `refund(id)`              | 订单买家、Paid、链上时间严格超过截止时间 | Refunded，退款给买家                         |
+| `confirm(id)`             | 订单买家、Paid 或 Shipped                | Completed，放款给卖家                        |
+| `dispute(id)`             | 买卖任一方、Paid 或 Shipped              | Disputed                                     |
+| `resolve(id, sellerWins)` | 两名指定仲裁人、Disputed                 | 先记录意见；两人一致时 Completed 或 Refunded |
 
 发货后的订单，即使超期也不能直接 `refund`，应确认收货或通过争议仲裁结算。卖家在到期后不能补标发货，以免撤销买家已经获得的未发货退款权。付款也必须在截止时间内进行。所有限制均在合约中执行，页面隐藏按钮并非权限保障。
 
@@ -27,30 +27,32 @@
 - 等待成功回执后刷新订单；拒签、回滚不会显示成功。保留交易链接，沿用现有账户及网络变更检查。
 - Shipped 可确认收货、发起争议。时间线增加 OrderShipped，时间和操作者读取实际区块及交易，不补造发货记录。
 
-## 统一部署后如何启用（现在保持空值）
+## 启用已部署的加分合约
 
 `packages/nextjs/.env.local` 的两个配置必须同时填写，之后重启 Next.js：
 
 ```dotenv
-NEXT_PUBLIC_ESCROW_BONUS_ADDRESS=
-NEXT_PUBLIC_ESCROW_BONUS_DEPLOY_BLOCK=
+NEXT_PUBLIC_ESCROW_BONUS_ADDRESS=0x307816f6C24820700Fe11fdA93CeD97C1834190f
+NEXT_PUBLIC_ESCROW_BONUS_DEPLOY_BLOCK=2800063
 ```
 
-地址来自未来实际部署回执；区块填写该部署交易的区块号。空值继续使用实验三地址。禁止填旧地址、零地址、缺失或无效区块。配置加分地址后会同时读取 `supportsShipping()`、`supportsDualArbitration()`，核验成功前 `/escrow` 的交易按钮禁用。列表、时间线、争议和创建/付款/确认使用同一份选中的地址与 ABI。
+以上为实际部署回执中的地址和区块。两个值同时留空则继续使用实验三地址。禁止填旧地址、零地址、缺失或无效区块。配置加分地址后会同时读取 `supportsShipping()`、`supportsDualArbitration()`，核验成功前 `/escrow` 的交易按钮禁用。列表、时间线、争议和创建/付款/确认使用同一份选中的地址与 ABI。
 
 ABI 通过编译产物生成：先执行 `yarn hardhat:compile`，再执行 `node scripts/export-escrow-bonus-abi.cjs`。该命令仅导出 ABI，不会部署合约。CI 使用 `--check` 防止 ABI 过期。双人仲裁修改 ABI 后也应重新生成。
 
-## 验证与后续真实验收
+## 验证与真实验收
 
 自动测试覆盖卖家权限、重复发货、截止时间前/等于/之后的边界、已发货禁止退款、过期禁止补发货、确认放款、发货后争议与仲裁结算、重复结算、页面权限、账户变化和过期配置等。浏览器隔离测试使用模拟钱包/RPC，不作为真实链上验收材料。
 
 2026-11-03 本地验证：25 个合约测试（其中 15 个针对加分合约）、60 个前端测试通过；两端 TypeScript、lint 及 ABI 一致性检查通过。独立浏览器模拟验证了卖家发货的成功回执刷新、拒签/回滚保持原状态、发货时间线、发货后确认及争议仲裁、未发货超期退款、错误版本禁用写操作和移动端布局。
 
-统一部署后至少执行并截图记录：
+真实链上验收已记录 #0 发货后确认、#1 未发货超期退款、#2 发货后争议并由双人裁决放款，三笔金额均为 10 个代币。详情和交易链接见 [验收操作表](ACCEPTANCE.md#加分项验收)。报告中的已发货退款受限截图没有对应的已打包失败交易哈希，不将其记作链上失败交易。
+
+以下为复现和扩展验收步骤，权限与边界中的未上链情形由自动测试覆盖，不能视为已发生的公共链交易：
 
 1. 新订单创建、授权付款，卖家在截止前标记发货，买家确认；核对卖家收款及时间线的 OrderShipped。
 2. 新订单付款后保持未发货，超过截止时间由买家退款；核对余额与 OrderRefunded。
 3. 新订单付款后发货，再超过截止时间；直接调用 refund 应失败，随后通过确认或争议仲裁结算。保存失败原因和成功交易证据。
-4. 验证非卖家不能发货、不能重复发货，终态订单不能再标记；双人仲裁整合后还需按其规则验收。
+4. 验证非卖家不能发货、不能重复发货，终态订单不能再标记；双人仲裁同时按其规则验证。
 
 订单号必须从新地址实际回执或页面读取。交易哈希、区块、时间、截图及报告文字均以实际结果为准；旧合约的订单不能证明新版发货已验收。

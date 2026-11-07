@@ -1,8 +1,8 @@
 # 宋穗杰：创建、付款与确认收货交接
 
-2026-10-31 交付。分支：`feat/order-actions`。本次完成宋负责的三个写操作及联调入口，尚未进行大作业三钱包业务验收。
+2026-10-31 交付。分支：`feat/order-actions`。以下保留当时的模块交接与验证记录。创建、付款、确认功能现已合并至 `main` 并接入 `/escrow`；后续路线 B 与加分项的真实验收见 [ACCEPTANCE.md](ACCEPTANCE.md)。
 
-## 本轮交给 PCM 的接入步骤
+## 交付时的接入步骤（已完成）
 
 已核对远端 `feat/order-list` 的 `469ab69` 版本：订单列表、顶部角色和 CZH 争议仲裁组件已经存在。本分支只交付宋的写操作，不改动组长的主页面与订单行。下一棒是彭春沐（PCM），将本分支合并到 `feat/order-list` 后完成以下两处接线：
 
@@ -19,14 +19,14 @@
 
 ## 已完成的行为
 
-| 文件（相对仓库根目录） | 行为 |
-| --- | --- |
+| 文件（相对仓库根目录）                                       | 行为                                                                                                                                                 |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `packages/nextjs/app/escrow/_components/CreateOrderForm.tsx` | 卖家、金额、到期分钟数、描述；动态读取 decimals/symbol；用 bigint 换算金额；读取链上时间和 orderCount；成功后从本笔回执 OrderCreated 解析真实订单 ID |
-| `packages/nextjs/app/escrow/_components/PayButton.tsx` | 仅订单买家在 Created 时显示；重新读取实际订单、余额与 allowance；只授权订单所需金额；等待成功回执后才 deposit；已有足额授权可直接付款 |
-| `packages/nextjs/app/escrow/_components/ConfirmButton.tsx` | 仅订单买家在 Paid 时显示；用户确认已收到商品或服务后调用 confirm；等待成功回执再刷新 |
-| `packages/nextjs/app/escrow/_hooks/useOrderTransaction.ts` | 钱包及 chain ID 检查、处理中禁止重复点击、签名前核对账户、回执等待、取消/替换交易处理、错误提示与交易哈希 |
-| `packages/nextjs/app/escrow/_lib/orderWrites.ts` | 金额和到期时间校验、可测试的付款与确认流程 |
-| `packages/nextjs/app/escrow/write/page.tsx` | 联调页面，支持创建后自动选择新订单，或手动读取真实 ID |
+| `packages/nextjs/app/escrow/_components/PayButton.tsx`       | 仅订单买家在 Created 时显示；重新读取实际订单、余额与 allowance；只授权订单所需金额；等待成功回执后才 deposit；已有足额授权可直接付款                |
+| `packages/nextjs/app/escrow/_components/ConfirmButton.tsx`   | 仅订单买家在 Paid 时显示；用户确认已收到商品或服务后调用 confirm；等待成功回执再刷新                                                                 |
+| `packages/nextjs/app/escrow/_hooks/useOrderTransaction.ts`   | 钱包及 chain ID 检查、处理中禁止重复点击、签名前核对账户、回执等待、取消/替换交易处理、错误提示与交易哈希                                            |
+| `packages/nextjs/app/escrow/_lib/orderWrites.ts`             | 金额和到期时间校验、可测试的付款与确认流程                                                                                                           |
+| `packages/nextjs/app/escrow/write/page.tsx`                  | 联调页面，支持创建后自动选择新订单，或手动读取真实 ID                                                                                                |
 
 合约和 ABI 均引用现有 `deployedContracts.ts`：Escrow `0x267dB7196845D6A1EE887889EeA581067aBe56Cb`，PCMToken `0x93c729e48c10EA7c5b7DC971f73DB2B130318631`，网络 60600。本次没有更改、重新部署合约。
 
@@ -70,7 +70,7 @@ cd packages/nextjs
 yarn exec eslint app/escrow tests/order-writes.test.mjs
 ```
 
-## 三人联合验收还需完成
+## 交付时的三人联合验收计划（基础流程已完成）
 
 开发分工不会改变链上角色：彭是买家，宋是卖家，蔡使用合约仲裁人钱包。宋实现的创建、付款、确认由彭的钱包验收；宋的钱包不能替代买家签名。
 
@@ -88,5 +88,3 @@ yarn exec eslint app/escrow tests/order-writes.test.mjs
 “授权再付款”涉及两份合约：approve 在代币合约中设置买家允许 Escrow 使用的额度；deposit 由 Escrow 调用 transferFrom 把代币从买家转入托管。发出 approve 不代表授权已上链，必须等待成功回执，才进行 deposit。若 approve 失败则停止；若 deposit 失败而授权成功，重试先读 allowance，避免重复授权。正式报告应引用本次新订单的两笔真实哈希、金额、spender 和钱包原图。
 
 按钮显示是交互层的角色提示，权限最终由合约的 onlyBuyer 与状态检查执行。宋即使开发买家按钮，验收时连接卖家钱包仍不能调用买家的确认操作。正式报告须使用三人新页面实操证据，不以本次单元测试或旧订单查询替代。
-
-AI 使用记录：协助拉取并核对仓库、实现以上前端文件、编写与执行本地测试、只读浏览器验证、整理本交接文档；本人仍需理解并能解释本人代码。未生成或填写虚构业务交易、钱包截图或验收结论。
